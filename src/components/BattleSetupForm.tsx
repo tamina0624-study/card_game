@@ -61,6 +61,7 @@ import BattleLogViewer, {
   groupByTurn,
 } from "@/components/BattleLogViewer";
 import type { BattleDetail, BattleSummary, Character, Deck, DeckSummary } from "@/lib/types";
+import { musicController } from "@/lib/audio/musicController";
 
 type DeckLoadState = "loading" | "loaded" | "error";
 
@@ -319,8 +320,10 @@ function BattleStage({
   actingNames?: Set<string>;
   defeatedNames?: Set<string>;
   revealedCount?: number;
-  /** 必殺技が発動したキャラクターのカットイン表示(一定時間で自動的に消える)。 */
-  cutIn?: { character: Character; moveName: string | null } | null;
+  /** 必殺技が発動したキャラクターのカットイン表示(一定時間で自動的に消える)。
+      `team`は所属デッキ(teamA=左側デッキ/teamB=右側デッキ)で、カットインを
+      同じ側に表示するために使う。 */
+  cutIn?: { character: Character; moveName: string | null; team: "teamA" | "teamB" } | null;
   /** 全ターン開示後の勝敗演出(null=未決着、まだ全ターンが開示されていない)。 */
   winningTeam?: "teamA" | "teamB" | null;
 }) {
@@ -426,7 +429,9 @@ function BattleStage({
           // 同じキャラクターが連続して必殺技を発動してもカットインを再生させたいため、
           // 開示ターン数が変わるたびにkeyを変えて再マウントし、CSSアニメーションを再生させる。
           key={`${cutIn.character.id}-turn-${revealedCount}`}
-          className="battle-stage__cutin"
+          className={`battle-stage__cutin battle-stage__cutin--${
+            cutIn.team === "teamA" ? "left" : "right"
+          }`}
         >
           <div className="battle-stage__cutin-image">
             {cutIn.character.imageUrl ? (
@@ -479,6 +484,18 @@ export default function BattleSetupForm({ battles }: { battles: BattleSummary[] 
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previousOverflow;
+    };
+  }, [isPopupOpen]);
+
+  // 戦闘画面(ポップアップ)が開いている間はBattleMusic、それ以外はBaseMusicをループ再生する。
+  useEffect(() => {
+    if (isPopupOpen) {
+      musicController.playBattle();
+    } else {
+      musicController.playBase();
+    }
+    return () => {
+      musicController.playBase();
     };
   }, [isPopupOpen]);
 
@@ -620,7 +637,11 @@ export default function BattleSetupForm({ battles }: { battles: BattleSummary[] 
 
   // 直前に開示されたターンに必殺技の発動が含まれていれば、そのキャラクターの
   // カード画像を戦闘エリアに一定時間だけカットイン表示する。
-  const [cutIn, setCutIn] = useState<{ character: Character; moveName: string | null } | null>(null);
+  const [cutIn, setCutIn] = useState<{
+    character: Character;
+    moveName: string | null;
+    team: "teamA" | "teamB";
+  } | null>(null);
   useEffect(() => {
     const latestTurn = turns[revealedCount - 1];
     if (!latestTurn) {
@@ -631,13 +652,33 @@ export default function BattleSetupForm({ battles }: { battles: BattleSummary[] 
       if (!name) {
         continue;
       }
-      const character = [...rosterA, ...rosterB].find((candidate) => candidate.name === name);
+      // デッキA(左側)所属かデッキB(右側)所属かを判定し、カットインを
+      // 発動キャラクターの所属デッキと同じ側(左/右)に表示する。
+      const characterA = rosterA.find((candidate) => candidate.name === name);
+      const characterB = rosterB.find((candidate) => candidate.name === name);
+      const character = characterA ?? characterB;
       if (!character) {
         continue;
       }
-      setCutIn({ character, moveName: extractMoveName(message) });
+      setCutIn({ character, moveName: extractMoveName(message), team: characterA ? "teamA" : "teamB" });
+      musicController.playSpecialSound();
       const timer = setTimeout(() => setCutIn(null), 2200);
       return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revealedCount]);
+
+  // 直前に開示されたターンで誰かが行動していれば(=`actingNames`)、通常攻撃の効果音を
+  // 鳴らす。ただし必殺技発動ターンはカットイン側の効果音(SPAtackSound)と重複させたく
+  // ないため除外する。
+  useEffect(() => {
+    const latestTurn = turns[revealedCount - 1];
+    if (!latestTurn || actingNames.size === 0) {
+      return;
+    }
+    const hasSpecialMove = latestTurn.messages.some((message) => findSpecialMoveName(message, rosterNames));
+    if (!hasSpecialMove) {
+      musicController.playAttackSound();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [revealedCount]);

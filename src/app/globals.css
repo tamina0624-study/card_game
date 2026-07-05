@@ -764,6 +764,14 @@ select:focus {
   animation: battle-modal-fade-in 0.2s ease-out;
 }
 
+/* スマートフォンの画面幅では余白が大きいと戦闘エリア/実況エリアの
+   横並び表示に使える幅が足りなくなるため、余白を切り詰める。 */
+@media (max-width: 700px), (max-height: 500px) {
+  .battle-modal-backdrop {
+    padding: 0.5rem;
+  }
+}
+
 @keyframes battle-modal-fade-in {
   from {
     opacity: 0;
@@ -804,14 +812,20 @@ select:focus {
 
 .battle-modal__layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* `minmax(0, 1fr)`にすることで、列内のカード表示等が幅を持て余していても
+     列自体が中身の幅に引っ張られて広がらないようにし、スマートフォンの
+     幅でも戦闘エリア/実況エリアを常に横並びのまま維持できるようにする。 */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 1.25rem;
   align-items: start;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 700px), (max-height: 500px) {
   .battle-modal__layout {
-    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    /* スマートフォンでは実況エリア(文字)より戦闘エリア(カード)を広く取り、
+       実況エリアは文字を縮小したうえで幅も狭くする。 */
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   }
 }
 
@@ -843,6 +857,12 @@ select:focus {
   background: linear-gradient(160deg, var(--surface-alt), var(--surface) 70%);
 }
 
+@media (max-width: 700px), (max-height: 500px) {
+  .battle-modal__log {
+    padding: 0.75rem;
+  }
+}
+
 .battle-stage {
   position: relative;
   min-height: 420px;
@@ -852,6 +872,21 @@ select:focus {
   background-position: center;
   overflow: hidden;
   margin-bottom: 1.5rem;
+}
+
+/* スマートフォンの横幅では戦闘エリアが実況エリアと横並びになり幅が
+   狭くなる分、無駄な最小高さを持たせないよう縮める。横向き(画面高さが
+   低い)の場合はさらに抑える。 */
+@media (max-width: 700px), (max-height: 500px) {
+  .battle-stage {
+    min-height: 300px;
+  }
+}
+
+@media (max-height: 500px) {
+  .battle-stage {
+    min-height: 220px;
+  }
 }
 
 .battle-stage__overlay {
@@ -865,6 +900,13 @@ select:focus {
   background: linear-gradient(180deg, rgba(7, 9, 18, 0.5), rgba(7, 9, 18, 0.55) 55%, rgba(7, 9, 18, 0.92));
 }
 
+@media (max-width: 700px), (max-height: 500px) {
+  .battle-stage__overlay {
+    gap: 0.75rem;
+    padding: 0.6rem 0.5rem 0.8rem;
+  }
+}
+
 .battle-stage__header {
   display: flex;
   align-items: center;
@@ -874,6 +916,13 @@ select:focus {
   border-radius: 999px;
   background: linear-gradient(90deg, rgba(79, 143, 224, 0.35), rgba(7, 9, 18, 0.2) 45%, rgba(7, 9, 18, 0.2) 55%, rgba(209, 73, 90, 0.35));
   border: 1px solid var(--border-strong);
+}
+
+@media (max-width: 700px), (max-height: 500px) {
+  .battle-stage__header {
+    gap: 0.4rem;
+    padding: 0.4rem 0.5rem;
+  }
 }
 
 .battle-stage__team-label {
@@ -913,6 +962,16 @@ select:focus {
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
 }
 
+@media (max-width: 700px), (max-height: 500px) {
+  .battle-stage__team-label {
+    font-size: 0.78rem;
+  }
+
+  .battle-stage__vs {
+    font-size: 0.85rem;
+  }
+}
+
 .battle-stage__teams {
   display: flex;
   /* 自分のデッキ(左)と相手のデッキ(右)の間を離して、一目で区別できるようにする。 */
@@ -920,9 +979,36 @@ select:focus {
   justify-content: center;
 }
 
+/* スマートフォンの幅では戦闘エリア自体が実況エリアと横並びで狭くなるため、
+   チームA/チームBを左右ではなく上下に並べ、カードサイズを保ったまま
+   横並びレイアウトを維持できるようにする。 */
+@media (max-width: 700px) {
+  .battle-stage__teams {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+}
+
 @media (max-width: 480px) {
   .battle-stage__teams {
-    gap: 1.5rem;
+    gap: 0.5rem;
+  }
+}
+
+/* スマートフォンの横画面(高さが低い)では、上下に並べると戦闘エリアの
+   高さに収まりきらず片側のデッキが見切れてしまう。横向きの場合は上下並びを
+   やめて左右並びに戻し、バトルエリア(`.battle-stage`)の左右端を基準に
+   相対配置することで、高さに関わらず両デッキを表示できるようにする
+   (`max-width: 700px`と両方に一致する幅の狭い横画面でも、後に定義した
+   このルールが優先されて左右並びになる)。 */
+@media (max-height: 500px) {
+  .battle-stage__teams {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 0.5rem;
   }
 }
 
@@ -936,6 +1022,24 @@ select:focus {
   gap: 0.6rem;
   padding-top: 0.5rem;
   transition: opacity 0.6s ease, filter 0.6s ease;
+}
+
+@media (max-width: 700px), (max-height: 500px) {
+  .battle-stage__team-column {
+    grid-template-columns: repeat(2, 60px);
+    gap: 0.4rem;
+    padding-top: 0.25rem;
+  }
+}
+
+/* 横向き(高さが低い)では左右並びに戻った分、横幅には余裕があるため
+   列数を増やして1チームあたりの縦の高さを抑え、戦闘エリアの高さに
+   収まりやすくする。 */
+@media (max-height: 500px) {
+  .battle-stage__team-column {
+    grid-template-columns: repeat(4, 50px);
+    gap: 0.3rem;
+  }
 }
 
 /* 全ターン開示後、勝ったチームの列を金色に輝かせて一目で勝敗が分かるようにする。 */
@@ -988,6 +1092,24 @@ select:focus {
   backdrop-filter: blur(2px);
 }
 
+@media (max-width: 700px), (max-height: 500px) {
+  .battle-stage__card {
+    width: 60px;
+    padding: 0.25rem;
+    gap: 0.15rem;
+  }
+}
+
+/* 横向き(高さが低い)では列数を4列に増やす(`.battle-stage__team-column`)分、
+   カード幅もその列幅(50px)に合わせて縮める。 */
+@media (max-height: 500px) {
+  .battle-stage__card {
+    width: 50px;
+    padding: 0.2rem;
+    gap: 0.1rem;
+  }
+}
+
 .battle-stage__card-thumb {
   width: 100%;
   aspect-ratio: 1 / 1;
@@ -1016,6 +1138,12 @@ select:focus {
   text-overflow: ellipsis;
   white-space: nowrap;
   width: 100%;
+}
+
+@media (max-width: 700px), (max-height: 500px) {
+  .battle-stage__card-name {
+    font-size: 0.58rem;
+  }
 }
 
 .battle-stage__loading {
@@ -1052,10 +1180,27 @@ select:focus {
     rgba(7, 9, 18, 0.2)
   );
   pointer-events: none;
-  animation: battle-stage-cutin 2.2s ease-in-out forwards;
 }
 
-@keyframes battle-stage-cutin {
+/* 発動キャラクターの所属デッキ側(左=デッキA/右=デッキB)にカットインを
+   表示し、その側の外側から現れて反対側へ抜けていくようにする。 */
+.battle-stage__cutin--left {
+  justify-content: flex-start;
+  animation: battle-stage-cutin-left 2.2s ease-in-out forwards;
+}
+
+.battle-stage__cutin--right {
+  justify-content: flex-end;
+  flex-direction: row-reverse;
+  animation: battle-stage-cutin-right 2.2s ease-in-out forwards;
+}
+
+.battle-stage__cutin--right .battle-stage__cutin-text {
+  align-items: flex-end;
+  text-align: right;
+}
+
+@keyframes battle-stage-cutin-left {
   0% {
     opacity: 0;
     transform: translateX(-32px);
@@ -1071,6 +1216,25 @@ select:focus {
   100% {
     opacity: 0;
     transform: translateX(24px);
+  }
+}
+
+@keyframes battle-stage-cutin-right {
+  0% {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+  12% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  82% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-24px);
   }
 }
 
@@ -1337,6 +1501,21 @@ select:focus {
   font-size: 0.92rem;
 }
 
+/* 実況エリア(戦闘ポップアップ)は、スマートフォンでは幅が狭いため
+   220px単位のグリッドだとはみ出してしまう。幅も文字サイズも縮小する。
+   対戦詳細ページ(`/battles/[id]`)側は対象外にするため`.battle-modal__log`
+   配下に限定する。 */
+@media (max-width: 700px), (max-height: 500px) {
+  .battle-modal__log .battle-detail__analysis-teams {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .battle-modal__log .battle-detail__analysis-team p {
+    font-size: 0.78rem;
+  }
+}
+
 .battle-detail__predicted-winner {
   font-size: 0.92rem;
   padding-top: 0.9rem;
@@ -1509,6 +1688,30 @@ select:focus {
   font-size: 0.9rem;
 }
 
+/* 実況エリア(戦闘ポップアップ内)は、スマートフォンでは戦闘エリアを広く
+   取るぶん幅が狭くなるため、文字サイズや余白を縮小して収まりやすくする。
+   `/battles/[id]`(対戦詳細ページ)側の`BattleLogViewer`はこの対象外にするため
+   `.battle-modal__log`配下に限定する。 */
+@media (max-width: 700px), (max-height: 500px) {
+  .battle-modal__log .battle-log__turn {
+    padding: 0.6rem 0.7rem;
+  }
+
+  .battle-modal__log .battle-log__turn-heading {
+    font-size: 0.65rem;
+  }
+
+  .battle-modal__log .battle-log__message {
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+
+  .battle-modal__log .battle-log__remaining,
+  .battle-modal__log .battle-log__done {
+    font-size: 0.75rem;
+  }
+}
+
 /* 最終結果バナー */
 
 .battle-result-banner {
@@ -1543,6 +1746,20 @@ select:focus {
 .battle-result-banner__mvp {
   color: var(--muted);
   font-size: 0.95rem;
+}
+
+@media (max-width: 700px), (max-height: 500px) {
+  .battle-modal__log .battle-result-banner {
+    padding: 1rem 0.75rem;
+  }
+
+  .battle-modal__log .battle-result-banner__winner {
+    font-size: 1.1rem;
+  }
+
+  .battle-modal__log .battle-result-banner__mvp {
+    font-size: 0.8rem;
+  }
 }
 
 /* --- 必殺技演出イベント(BattleEventCard) ------------------------------- */

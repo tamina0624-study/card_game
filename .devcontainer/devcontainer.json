@@ -1,0 +1,11 @@
+{
+  "name": "card_game",
+  "forwardPorts": [3900],
+  "portsAttributes": {
+    "3900": {
+      "label": "Next.js App",
+      "visibility": "public"
+    }
+  },
+  "postStartCommand": "gh codespace ports visibility 3900:public --codespace \"$CODESPACE_NAME\" || true"
+}

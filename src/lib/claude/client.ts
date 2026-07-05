@@ -11,6 +11,10 @@
  *   (Anthropicの有料APIキーが用意できない開発環境向けの代替経路。
  *   モデルは `OPENROUTER_MODEL`、未設定時は無料枠モデル)。
  * - `MODEL` は環境変数 `ANTHROPIC_MODEL`(未設定時は `claude-opus-4-8`)。
+ * - `callWithSystemPrompt` は任意のシステムプロンプト・`max_tokens` でAIを1回
+ *   呼び出す汎用ヘルパー(`callBattleJudge` はこれを `SYSTEM_PROMPT` 固定で
+ *   呼び出すラッパー)。戦闘以外の用途(例: `lib/characters/aiGenerate.ts` の
+ *   キャラクター案生成)はこちらを直接使う。
  *
  * 参照: docs/設計.md 1.4「Claude API呼び出し方針」。
  */
@@ -53,21 +57,24 @@ const openrouterClient = OPENROUTER_API_KEY
   : null;
 
 /**
- * AI審判に戦闘用のユーザーメッセージを送信し、応答テキストを返す。
+ * 指定したシステムプロンプト・ユーザーメッセージでAIを1回呼び出し、応答テキストを返す。
  *
- * - システムプロンプトは `SYSTEM_PROMPT` をそのまま使用する。
  * - `temperature`/`top_p`/`top_k`・`thinking` は指定しない(設計書1.4節のとおり)。
  * - `OPENROUTER_API_KEY` が設定されている場合はOpenRouter経由、それ以外は
  *   Anthropic経由で呼び出す。
  * - APIが投げるエラーはそのまま呼び出し元に伝播させる(ここでは捕捉しない)。
  */
-export async function callBattleJudge(userMessage: string): Promise<string> {
+export async function callWithSystemPrompt(
+  systemPrompt: string,
+  userMessage: string,
+  maxTokens: number,
+): Promise<string> {
   if (openrouterClient) {
     const response = await openrouterClient.chat.completions.create({
       model: OPENROUTER_MODEL,
-      max_tokens: 8000,
+      max_tokens: maxTokens,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         { role: "user", content: userMessage },
       ],
     });
@@ -77,8 +84,8 @@ export async function callBattleJudge(userMessage: string): Promise<string> {
 
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 8000,
-    system: SYSTEM_PROMPT,
+    max_tokens: maxTokens,
+    system: systemPrompt,
     messages: [{ role: "user", content: userMessage }],
   });
 
@@ -86,4 +93,12 @@ export async function callBattleJudge(userMessage: string): Promise<string> {
     .filter((block): block is Anthropic.TextBlock => block.type === "text")
     .map((block) => block.text)
     .join("");
+}
+
+/**
+ * AI審判に戦闘用のユーザーメッセージを送信し、応答テキストを返す。
+ * システムプロンプトは `SYSTEM_PROMPT` をそのまま使用する。
+ */
+export async function callBattleJudge(userMessage: string): Promise<string> {
+  return callWithSystemPrompt(SYSTEM_PROMPT, userMessage, 8000);
 }

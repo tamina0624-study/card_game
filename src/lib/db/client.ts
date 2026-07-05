@@ -4,6 +4,9 @@
  * - 接続先は環境変数 `DB_PATH`(未設定時は `./data/game.db`)。
  * - 親ディレクトリが存在しなければ作成する。
  * - 接続確立時に `PRAGMA foreign_keys = ON` を必ず実行する(外部キー制約を有効化)。
+ * - 接続確立時に schema.sql (CREATE TABLE IF NOT EXISTS のみ) を必ず適用する。
+ *   デプロイ先で `db:migrate` を明示的に実行しない環境(Render等)でもテーブルが
+ *   存在しない事態を防ぐための自己修復措置。
  */
 
 import fs from "fs";
@@ -17,6 +20,12 @@ function resolveDbPath(): string {
   return path.resolve(process.cwd(), dbPath);
 }
 
+function applySchema(db: Database.Database): void {
+  const schemaPath = path.join(process.cwd(), "src", "lib", "db", "schema.sql");
+  const schemaSql = fs.readFileSync(schemaPath, "utf-8");
+  db.exec(schemaSql);
+}
+
 function createConnection(): Database.Database {
   const resolvedPath = resolveDbPath();
   const dir = path.dirname(resolvedPath);
@@ -26,6 +35,7 @@ function createConnection(): Database.Database {
 
   const db = new Database(resolvedPath);
   db.pragma("foreign_keys = ON");
+  applySchema(db);
   return db;
 }
 

@@ -47,6 +47,8 @@ next-env.d.ts
 # SQLite database files
 data/*.db
 data/*.db-journal
+# 本番投入済みデータをそのままデプロイに含めるため追跡対象にする
+!data/game.db
 
 # uploaded character images (keep the directory via .gitkeep)
 public/uploads/characters/*

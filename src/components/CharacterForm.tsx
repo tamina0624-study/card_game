@@ -11,6 +11,10 @@
  *   返却された `url` をプレビュー表示・フォーム状態(`imageUrl`)に保持する)
  * - `PointAllocator`(パラメーター配分UI、100ポイント超過時は送信を無効化)
  * - `SpecialMoveEditor`(必殺技の追加・編集UI)
+ * - (`mode === "create"` のみ)「AIにキャラクター案を考えてもらう」欄。自由記述の
+ *   「雰囲気・イメージ」を `POST /api/characters/generate` へ送信し、AIが考案した
+ *   name/description/parameters/specialMoves で各入力欄を上書きする(画像は対象外、
+ *   ユーザー自身が用意する)。生成後もユーザーは自由に編集できる。
  *
  * 作成時は `POST /api/characters`、編集時は `PUT /api/characters/:id` へ送信し、
  * APIから返るバリデーションエラー(`{ error, details }`)を画面に表示する。
@@ -61,6 +65,10 @@ export default function CharacterForm(props: CharacterFormProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<string[]>([]);
 
+  const [concept, setConcept] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+
   const totalPoints = parameters.reduce(
     (sum, parameter) => sum + (Number.isFinite(parameter.value) ? parameter.value : 0),
     0
@@ -107,6 +115,55 @@ export default function CharacterForm(props: CharacterFormProps) {
 
   function handleRemoveImage() {
     setImageUrl(null);
+  }
+
+  async function handleGenerate() {
+    if (concept.trim().length === 0) {
+      setGenerateError("雰囲気・イメージを入力してください。");
+      return;
+    }
+
+    setGenerateError(null);
+    setGenerating(true);
+    try {
+      const response = await fetch("/api/characters/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ concept: concept.trim() }),
+      });
+      const data: unknown = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const message =
+          data && typeof data === "object" && "error" in data && typeof (data as { error: unknown }).error === "string"
+            ? (data as { error: string }).error
+            : "AIによるキャラクター案の生成に失敗しました。";
+        setGenerateError(message);
+        return;
+      }
+
+      const result = data as {
+        name: string;
+        description: string;
+        parameters: { name: string; value: number }[];
+        specialMoves: { name: string; description?: string; flavorText?: string }[];
+      };
+
+      setName(result.name);
+      setDescription(result.description);
+      setParameters(result.parameters.map((parameter) => ({ name: parameter.name, value: parameter.value })));
+      setSpecialMoves(
+        result.specialMoves.map((move) => ({
+          name: move.name,
+          description: move.description ?? "",
+          flavorText: move.flavorText ?? "",
+        }))
+      );
+    } catch {
+      setGenerateError("通信エラーが発生しました。しばらくしてから再度お試しください。");
+    } finally {
+      setGenerating(false);
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -192,6 +249,37 @@ export default function CharacterForm(props: CharacterFormProps) {
             <li key={index}>{message}</li>
           ))}
         </ul>
+      )}
+
+      {props.mode === "create" && (
+        <section className="card" style={{ marginBottom: "1.5rem" }}>
+          <h2 style={{ marginBottom: "1rem" }}>AIにキャラクター案を考えてもらう</h2>
+          <p style={{ color: "var(--muted)", marginBottom: "0.75rem" }}>
+            好きな雰囲気やイメージを入力すると、AIが名前・説明・パラメーター・必殺技の案を考えて下記の入力欄に反映します(画像は含まれないため、別途ご自身で用意してアップロードしてください)。生成後も内容は自由に編集できます。
+          </p>
+
+          <div className="form-field">
+            <label htmlFor="character-concept">雰囲気・イメージ</label>
+            <textarea
+              id="character-concept"
+              value={concept}
+              onChange={(event) => setConcept(event.target.value)}
+              rows={3}
+              placeholder="例: 氷の国から来た寡黙な剣士。仲間思いだが戦いになると冷酷になる。"
+              disabled={generating}
+            />
+          </div>
+
+          {generateError && (
+            <p className="form-error" role="alert">
+              {generateError}
+            </p>
+          )}
+
+          <button type="button" className="button button-secondary" onClick={handleGenerate} disabled={generating}>
+            {generating ? "生成中..." : "AIに考えてもらう"}
+          </button>
+        </section>
       )}
 
       <section className="card" style={{ marginBottom: "1.5rem" }}>
