@@ -43,8 +43,16 @@ const DEFAULT_EXTENSION_BY_MIME_TYPE: Record<AllowedImageMimeType, string> = {
   "image/gif": ".gif",
 };
 
-/** 画像保存先ディレクトリ(`public/uploads/characters/`)。 */
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "characters");
+/**
+ * 画像保存先ディレクトリ(`public/uploads/characters/`)。
+ *
+ * 注意: `next start`(本番サーバー)は`public/`配下のファイル一覧を起動時に
+ * 一度だけスキャンするため、起動後にここへ書き込まれたファイルは静的配信
+ * (`/uploads/characters/...`への直接アクセス)の対象にならず404になる。
+ * そのため配信は `app/api/uploads/characters/[filename]/route.ts` 経由で行う
+ * (`next.config.ts` のrewriteで `/uploads/characters/:path*` をそちらへ転送)。
+ */
+export const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "characters");
 
 /**
  * MIMEタイプ・サイズ検証に違反した場合に投げるエラー。
