@@ -50,6 +50,5 @@ data/*.db-journal
 # 本番投入済みデータをそのままデプロイに含めるため追跡対象にする
 !data/game.db
 
-# uploaded character images (keep the directory via .gitkeep)
-public/uploads/characters/*
-!public/uploads/characters/.gitkeep
+# uploaded character images
+# Renderのディスクは一時的で、アップロード画像がデプロイに含まれないと404になるため追跡対象にする
