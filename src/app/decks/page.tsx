@@ -32,7 +32,7 @@ function formatDateTime(value: string): string {
 }
 
 export default async function DecksPage() {
-  const decks = listDecks();
+  const decks = await listDecks();
 
   return (
     <div className="page-bg">

@@ -14,7 +14,7 @@ import type { CharacterSummary } from "@/lib/types";
 
 /** キャラクター一覧をサマリDTOの配列で返す。 */
 export async function GET() {
-  const characters = listCharacters();
+  const characters = await listCharacters();
   const summaries: CharacterSummary[] = characters.map(toCharacterSummary);
   return NextResponse.json(summaries, { status: 200 });
 }
@@ -46,6 +46,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const character = createCharacter(result.data);
+  const character = await createCharacter(result.data);
   return NextResponse.json(character, { status: 201 });
 }

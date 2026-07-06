@@ -13,7 +13,7 @@ import { validateDeckInput } from "@/lib/decks/validation";
 
 /** デッキ一覧を概要DTO(id/name/ownerName/createdAt)の配列で返す。 */
 export async function GET() {
-  const decks = listDecks();
+  const decks = await listDecks();
   return NextResponse.json(decks, { status: 200 });
 }
 
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const deck = createDeck(result.data);
+    const deck = await createDeck(result.data);
     return NextResponse.json(deck, { status: 201 });
   } catch (error) {
     if (error instanceof CharacterNotFoundError) {

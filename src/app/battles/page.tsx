@@ -14,7 +14,7 @@ import { listBattles } from "@/lib/battles/repository";
 export const dynamic = "force-dynamic";
 
 export default async function BattlesPage() {
-  const battles = listBattles();
+  const battles = await listBattles();
   // 新しい対戦が上に来るよう、id降順(実行順の逆順)で表示する。
   const sortedBattles = [...battles].sort((a, b) => b.id - a.id);
 

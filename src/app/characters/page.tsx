@@ -16,7 +16,7 @@ import { listCharacters, toCharacterSummary } from "@/lib/characters/repository"
 export const dynamic = "force-dynamic";
 
 export default async function CharactersPage() {
-  const characters = listCharacters().map(toCharacterSummary);
+  const characters = (await listCharacters()).map(toCharacterSummary);
 
   return (
     <div className="page-bg">

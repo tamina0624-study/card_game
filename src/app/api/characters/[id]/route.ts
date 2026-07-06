@@ -35,7 +35,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "idが不正です。" }, { status: 400 });
   }
 
-  const character = getCharacterById(id);
+  const character = await getCharacterById(id);
   if (!character) {
     return NextResponse.json({ error: "キャラクターが見つかりません。" }, { status: 404 });
   }
@@ -76,7 +76,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     );
   }
 
-  const character = updateCharacter(id, result.data);
+  const character = await updateCharacter(id, result.data);
   if (!character) {
     return NextResponse.json({ error: "キャラクターが見つかりません。" }, { status: 404 });
   }
@@ -97,7 +97,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
   }
 
   try {
-    const deleted = deleteCharacter(id);
+    const deleted = await deleteCharacter(id);
     if (!deleted) {
       return NextResponse.json({ error: "キャラクターが見つかりません。" }, { status: 404 });
     }

@@ -52,3 +52,6 @@ data/*.db-journal
 
 # uploaded character images
 # Renderのディスクは一時的で、アップロード画像がデプロイに含まれないと404になるため追跡対象にする
+
+# PHPブリッジの実接続情報・シークレット(DB認証情報・APIキー)。config.example.phpのみ追跡する。
+php/config.php

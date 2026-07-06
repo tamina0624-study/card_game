@@ -62,6 +62,7 @@ import BattleLogViewer, {
 } from "@/components/BattleLogViewer";
 import type { BattleDetail, BattleSummary, Character, Deck, DeckSummary } from "@/lib/types";
 import { musicController } from "@/lib/audio/musicController";
+import { assetUrl } from "@/lib/assets";
 
 type DeckLoadState = "loading" | "loaded" | "error";
 
@@ -330,7 +331,7 @@ function BattleStage({
   return (
     <div
       className="battle-stage"
-      style={{ backgroundImage: `url(/battle-backgrounds/${background}.png)` }}
+      style={{ backgroundImage: `url(${assetUrl(`/battle-backgrounds/${background}.png`)})` }}
       role="status"
       aria-live="polite"
     >

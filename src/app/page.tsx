@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { assetUrl } from "@/lib/assets";
 
 /**
  * トップページ。
@@ -22,7 +23,7 @@ export default function Home() {
         <section className="home-hero">
           <div className="home-hero__character home-hero__character--left" aria-hidden="true">
             {/* eslint-disable-next-line @next/next/no-img-element -- 装飾用の静的サンプル画像 */}
-            <img src="/characters/sample/zephyr.png" alt="" />
+            <img src={assetUrl("/characters/sample/zephyr.png")} alt="" />
           </div>
 
           <div className="home-hero__content">
@@ -43,7 +44,7 @@ export default function Home() {
 
           <div className="home-hero__character home-hero__character--right" aria-hidden="true">
             {/* eslint-disable-next-line @next/next/no-img-element -- 装飾用の静的サンプル画像 */}
-            <img src="/characters/sample/venom.png" alt="" />
+            <img src={assetUrl("/characters/sample/venom.png")} alt="" />
           </div>
         </section>
 

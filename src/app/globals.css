@@ -1912,7 +1912,7 @@ select:focus {
   z-index: -1;
   background:
     linear-gradient(180deg, rgba(7, 9, 18, 0.45), rgba(7, 9, 18, 0.75) 55%, rgba(7, 9, 18, 0.92)),
-    url(/backgrounds/top-hero.jpg);
+    var(--hero-bg-url);
   background-size: cover;
   background-position: center 25%;
   background-repeat: no-repeat;

@@ -1,0 +1,11 @@
+# アップロードされた画像が万一PHPファイルとして偽装されていても実行されないようにする
+# (多層防御。拡張子・MIMEタイプはphp/upload.php側で厳格に検証済み)。
+<FilesMatch "\.(php|phtml|php\d|phar)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>

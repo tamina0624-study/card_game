@@ -28,7 +28,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "idが不正です。" }, { status: 400 });
   }
 
-  const battle = getBattleDetail(id);
+  const battle = await getBattleDetail(id);
   if (!battle) {
     return NextResponse.json({ error: "対戦が見つかりません。" }, { status: 404 });
   }

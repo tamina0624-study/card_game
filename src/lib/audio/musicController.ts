@@ -8,9 +8,11 @@
  */
 "use client";
 
+import { assetUrl } from "@/lib/assets";
+
 type Track = "base" | "battle";
 
-const SOUND_DIR = "/sound";
+const SOUND_DIR = assetUrl("/sound");
 const MUSIC_VOLUME = 0.45;
 const SFX_VOLUME = 0.8;
 

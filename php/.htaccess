@@ -1,0 +1,10 @@
+# config.php(DB接続情報・APIキー)とschema.sql/seed-data.jsonへの直接アクセスを拒否する。
+<FilesMatch "^(config\.php|schema\.sql|seed-data\.json)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>

@@ -31,7 +31,7 @@ import type { BattleInput } from "@/lib/types";
 
 /** バトル履歴一覧を概要DTOの配列で返す。 */
 export async function GET() {
-  const battles = listBattles();
+  const battles = await listBattles();
   return NextResponse.json(battles, { status: 200 });
 }
 
@@ -79,14 +79,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const deckA = getDeckById(input.deckAId);
+  const deckA = await getDeckById(input.deckAId);
   if (!deckA) {
     return NextResponse.json(
       { error: `デッキ(id=${input.deckAId})が見つかりません。` },
       { status: 400 }
     );
   }
-  const deckB = getDeckById(input.deckBId);
+  const deckB = await getDeckById(input.deckBId);
   if (!deckB) {
     return NextResponse.json(
       { error: `デッキ(id=${input.deckBId})が見つかりません。` },
@@ -94,16 +94,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const battleId = createPendingBattle(input.deckAId, input.deckBId);
+  const battleId = await createPendingBattle(input.deckAId, input.deckBId);
 
   try {
     const prompt = buildBattlePrompt(deckA, deckB);
     const { data, rawText } = await generateBattleWithRetry(prompt);
-    saveBattleResult(battleId, data, rawText);
-    return NextResponse.json(getBattleDetail(battleId), { status: 201 });
+    await saveBattleResult(battleId, data, rawText);
+    return NextResponse.json(await getBattleDetail(battleId), { status: 201 });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    markBattleFailed(battleId, errorMessage);
+    await markBattleFailed(battleId, errorMessage);
     return NextResponse.json({ errorMessage }, { status: 502 });
   }
 }

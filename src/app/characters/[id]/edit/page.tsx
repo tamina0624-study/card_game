@@ -19,7 +19,7 @@ export default async function EditCharacterPage({ params }: PageProps) {
   if (!/^\d+$/.test(idParam)) {
     notFound();
   }
-  const character = getCharacterById(Number(idParam));
+  const character = await getCharacterById(Number(idParam));
   if (!character) {
     notFound();
   }

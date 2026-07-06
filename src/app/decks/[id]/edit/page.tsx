@@ -19,7 +19,7 @@ export default async function EditDeckPage({ params }: PageProps) {
   if (!/^\d+$/.test(idParam)) {
     notFound();
   }
-  const deck = getDeckById(Number(idParam));
+  const deck = await getDeckById(Number(idParam));
   if (!deck) {
     notFound();
   }

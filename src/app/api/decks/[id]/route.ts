@@ -36,7 +36,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "idが不正です。" }, { status: 400 });
   }
 
-  const deck = getDeckById(id);
+  const deck = await getDeckById(id);
   if (!deck) {
     return NextResponse.json({ error: "デッキが見つかりません。" }, { status: 404 });
   }
@@ -79,7 +79,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   }
 
   try {
-    const deck = updateDeck(id, result.data);
+    const deck = await updateDeck(id, result.data);
     if (!deck) {
       return NextResponse.json({ error: "デッキが見つかりません。" }, { status: 404 });
     }
@@ -105,7 +105,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
   }
 
   try {
-    const deleted = deleteDeck(id);
+    const deleted = await deleteDeck(id);
     if (!deleted) {
       return NextResponse.json({ error: "デッキが見つかりません。" }, { status: 404 });
     }

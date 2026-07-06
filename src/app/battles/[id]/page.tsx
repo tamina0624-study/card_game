@@ -21,7 +21,7 @@ import type { BattleDetail, Character } from "@/lib/types";
  */
 
 /** idが数値でない場合、または対戦が存在しない場合は `null` を返す。 */
-function fetchBattle(id: string) {
+async function fetchBattle(id: string) {
   if (!/^\d+$/.test(id)) {
     return null;
   }
@@ -29,8 +29,8 @@ function fetchBattle(id: string) {
 }
 
 /** デッキの前衛+控え(計8体)を、ロースター表示・行動/戦闘不能演出の名前照合に使う配列として取得する。 */
-function fetchRoster(deckId: number): Character[] {
-  const deck = getDeckById(deckId);
+async function fetchRoster(deckId: number): Promise<Character[]> {
+  const deck = await getDeckById(deckId);
   if (!deck) {
     return [];
   }
@@ -66,14 +66,14 @@ type PageProps = {
 
 export default async function BattleDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const battle = fetchBattle(id);
+  const battle = await fetchBattle(id);
 
   if (!battle) {
     notFound();
   }
 
-  const rosterA = fetchRoster(battle.deckA.id);
-  const rosterB = fetchRoster(battle.deckB.id);
+  const rosterA = await fetchRoster(battle.deckA.id);
+  const rosterB = await fetchRoster(battle.deckB.id);
 
   /** `'teamA' | 'teamB'` をそのチームが使用しているデッキ名に変換する。 */
   const teamName = (team: "teamA" | "teamB"): string =>
