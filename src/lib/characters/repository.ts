@@ -29,6 +29,22 @@ export class CharacterInUseError extends Error {
 }
 
 /**
+ * 指定した character_id がシステムキャラクター(`is_system = true`)であるため
+ * 編集・削除できないことを表すエラー。
+ * 呼び出し元(API Route Handler)はこのエラーを捕捉して 403 Forbidden を返すこと。
+ */
+export class SystemCharacterLockedError extends Error {
+  readonly code = "SYSTEM_CHARACTER_LOCKED" as const;
+  readonly characterId: number;
+
+  constructor(characterId: number) {
+    super(`キャラクター(id=${characterId})はシステムキャラクターのため編集・削除できません。`);
+    this.name = "SystemCharacterLockedError";
+    this.characterId = characterId;
+  }
+}
+
+/**
  * キャラクターを新規作成する。
  * `characters` へのINSERTと `character_parameters` / `special_moves` への一括INSERTは
  * PHPブリッジ側(`php/characters.php`)で単一トランザクションとして実行される。
@@ -50,6 +66,7 @@ export function toCharacterSummary(character: Character): CharacterSummary {
     description: character.description,
     imageUrl: character.imageUrl,
     totalPoints: character.totalPoints,
+    isSystem: character.isSystem,
     parameterCount: character.parameters.length,
     specialMoveCount: character.specialMoves.length,
     createdAt: character.createdAt,
@@ -80,6 +97,9 @@ export async function updateCharacter(id: number, input: CharacterInput): Promis
     if (error instanceof BridgeError && error.status === 404 && error.code === null) {
       return null;
     }
+    if (error instanceof BridgeError && error.code === "SYSTEM_CHARACTER_LOCKED") {
+      throw new SystemCharacterLockedError(id);
+    }
     throw error;
   }
 }
@@ -101,6 +121,9 @@ export async function deleteCharacter(id: number): Promise<boolean> {
     }
     if (error instanceof BridgeError && error.code === "CHARACTER_IN_USE") {
       throw new CharacterInUseError(id);
+    }
+    if (error instanceof BridgeError && error.code === "SYSTEM_CHARACTER_LOCKED") {
+      throw new SystemCharacterLockedError(id);
     }
     throw error;
   }

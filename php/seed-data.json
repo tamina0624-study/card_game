@@ -733,6 +733,132 @@
           "description": "めったに見られない本気の構えから、重力をねじ曲げるほどの超強力なエネルギー弾を放つ。"
         }
       ]
+    },
+    {
+      "name": "ツノパタ",
+      "description": "小さな白い角と蝶の羽を持つ、しましま模様のもふもふモンスター。まだ戦いに慣れておらず、ふわふわと飛び跳ねるだけで精一杯。",
+      "imageUrl": "/characters/sample/tsunopata.png",
+      "isSystem": true,
+      "parameters": [
+        { "name": "とびはねる力", "value": 8 },
+        { "name": "のんびり体力", "value": 7 },
+        { "name": "キラキラ魔力", "value": 5 }
+      ],
+      "specialMoves": [
+        {
+          "name": "よちよちタックル",
+          "description": "おぼつかない足取りで体当たりする、威力はほとんどない愛らしい攻撃。"
+        },
+        {
+          "name": "りんぷんパウダー",
+          "description": "蝶の鱗粉をふわっと撒き散らして相手を軽くくすぐる。"
+        }
+      ]
+    },
+    {
+      "name": "モコリーフ",
+      "description": "頭から葉っぱが一枚生えた、もこもこの毛玉のようなモンスター。性格はとても穏やかで、争いごとが大の苦手。",
+      "imageUrl": "/characters/sample/mokoriifu.png",
+      "isSystem": true,
+      "parameters": [
+        { "name": "のんびり体力", "value": 8 },
+        { "name": "もこもこ防御", "value": 7 },
+        { "name": "はっぱ魔力", "value": 5 }
+      ],
+      "specialMoves": [
+        {
+          "name": "もふもふブロック",
+          "description": "ふわふわの毛で身を守るだけで、反撃はしない防御姿勢。"
+        },
+        {
+          "name": "こもれびシャワー",
+          "description": "葉っぱから木漏れ日のような優しい光をこぼす、癒し程度の効果。"
+        }
+      ]
+    },
+    {
+      "name": "ぷにミミュ",
+      "description": "うさぎのような長い耳を持つ、ぷにぷにのゼリー状モンスター。いつもニコニコ笑っているが、ぷるぷる震えるだけで攻撃はほぼできない。",
+      "imageUrl": "/characters/sample/punimimyu.png",
+      "isSystem": true,
+      "parameters": [
+        { "name": "ぷるぷる回避", "value": 7 },
+        { "name": "みみだんぼ聴力", "value": 6 },
+        { "name": "ハッピーメンタル", "value": 7 }
+      ],
+      "specialMoves": [
+        {
+          "name": "ぷにぷにたいあたり",
+          "description": "体をぷるんと弾ませてぶつかるだけの、ほぼダメージのない体当たり。"
+        },
+        {
+          "name": "スターキラキラ",
+          "description": "星形の模様をキラッと光らせて相手の目を少しくらませる。"
+        }
+      ]
+    },
+    {
+      "name": "コロドラ",
+      "description": "生まれたばかりの小さな竜。まだ体も小さく牙も生え揃っておらず、炎を吐こうとしても小さな煙しか出ない。",
+      "imageUrl": "/characters/sample/korodora.png",
+      "isSystem": true,
+      "parameters": [
+        { "name": "ちいさい牙", "value": 8 },
+        { "name": "うろこ防御", "value": 6 },
+        { "name": "ちょこっと炎", "value": 6 }
+      ],
+      "specialMoves": [
+        {
+          "name": "あまがみアタック",
+          "description": "生え変わったばかりの牙で軽く甘噛みする。"
+        },
+        {
+          "name": "けむりぷしゅー",
+          "description": "気合を入れて炎を吐こうとするが、白い煙が少し出るだけ。"
+        }
+      ]
+    },
+    {
+      "name": "ホロフクロン",
+      "description": "フクロウと小さな竜が合わさったような姿のモンスター。飛ぶのがまだ苦手で、羽ばたいてもすぐ着地してしまう。",
+      "imageUrl": "/characters/sample/horofukuron.png",
+      "isSystem": true,
+      "parameters": [
+        { "name": "ぱたぱた素早さ", "value": 7 },
+        { "name": "つぶらな瞳", "value": 7 },
+        { "name": "ちいさな角", "value": 6 }
+      ],
+      "specialMoves": [
+        {
+          "name": "ぱたぱたキック",
+          "description": "羽ばたきながら繰り出す、勢いの弱いキック。"
+        },
+        {
+          "name": "まんまるアイズ",
+          "description": "つぶらな瞳でじっと見つめて相手の気をそらす。"
+        }
+      ]
+    },
+    {
+      "name": "ツノイモムシュ",
+      "description": "小さな角と斑点模様を持つ、いもむし型のモンスター。動きはゆっくりで、まだ思うように体をうまく動かせない。",
+      "imageUrl": "/characters/sample/tsunoimomushu.png",
+      "isSystem": true,
+      "parameters": [
+        { "name": "のそのそ素早さ", "value": 6 },
+        { "name": "まるまる体力", "value": 8 },
+        { "name": "ちいさな角", "value": 6 }
+      ],
+      "specialMoves": [
+        {
+          "name": "のそのそころがり",
+          "description": "ゆっくり体を丸めて転がるだけの攻撃。"
+        },
+        {
+          "name": "ぷちどくしぶき",
+          "description": "ほんの少しだけ痺れる汁を飛ばす、効果は薄い。"
+        }
+      ]
     }
   ],
   "decks": [

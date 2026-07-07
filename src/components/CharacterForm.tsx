@@ -76,6 +76,7 @@ export default function CharacterForm(props: CharacterFormProps) {
   const isOverLimit = totalPoints > MAX_TOTAL_POINTS;
   const isNameValid = name.trim().length > 0;
   const canSubmit = !submitting && !imageUploading && isNameValid && !isOverLimit;
+  const isSystemLocked = props.mode === "edit" && props.initialCharacter.isSystem;
 
   async function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -234,6 +235,19 @@ export default function CharacterForm(props: CharacterFormProps) {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (isSystemLocked) {
+    return (
+      <div className="card">
+        <p style={{ marginBottom: "1rem" }}>
+          このキャラクターはシステムキャラクターのため、編集(パラメーターの変更を含む)や削除はできません。
+        </p>
+        <Link href="/characters" className="button button-secondary">
+          一覧に戻る
+        </Link>
+      </div>
+    );
   }
 
   return (

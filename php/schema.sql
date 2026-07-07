@@ -9,6 +9,10 @@ CREATE TABLE IF NOT EXISTS characters (
   image_url TEXT,
   description TEXT,
   total_points INT NOT NULL DEFAULT 0,
+  -- システム(運営)側が登録した固定キャラクターかどうか。trueの場合、
+  -- characters.php はPUT/DELETEを403で拒否し、編集画面でパラメーターを
+  -- 強化・削除できないようにする(migrate.phpの追記ALTER文も参照)。
+  is_system TINYINT(1) NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

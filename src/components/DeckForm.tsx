@@ -27,7 +27,7 @@ import type { Deck, DeckCardInput, DeckInput } from "@/lib/types";
 type ApiErrorIssue = { message?: unknown };
 
 export type DeckFormProps =
-  | { mode: "create" }
+  | { mode: "create"; defaultOwnerName?: string }
   | { mode: "edit"; deckId: number; initialDeck: Deck };
 
 /** `Deck`(front/bench各体のキャラクター全情報)を `DeckBuilder` が扱う `DeckCardInput[]` へ変換する。 */
@@ -42,8 +42,10 @@ export default function DeckForm(props: DeckFormProps) {
   const router = useRouter();
   const initial = props.mode === "edit" ? props.initialDeck : null;
 
+  const defaultOwnerName = props.mode === "create" ? (props.defaultOwnerName ?? "") : "";
+
   const [name, setName] = useState(initial?.name ?? "");
-  const [ownerName, setOwnerName] = useState(initial?.ownerName ?? "");
+  const [ownerName, setOwnerName] = useState(initial?.ownerName ?? defaultOwnerName);
   const [cards, setCards] = useState<DeckCardInput[]>(initial ? toInitialCards(initial) : []);
 
   const [submitting, setSubmitting] = useState(false);
@@ -130,6 +132,12 @@ export default function DeckForm(props: DeckFormProps) {
 
       <section className="card" style={{ marginBottom: "1.5rem" }}>
         <h2 style={{ marginBottom: "1rem" }}>基本情報</h2>
+
+        {props.mode === "create" && defaultOwnerName && (
+          <p style={{ color: "var(--muted)", marginBottom: "1rem" }}>
+            ログイン中のため、このデッキは{defaultOwnerName}さんの専用デッキ(ストーリーモードで使用)として登録されます。
+          </p>
+        )}
 
         <div className="form-field">
           <label htmlFor="deck-name">デッキ名 *</label>

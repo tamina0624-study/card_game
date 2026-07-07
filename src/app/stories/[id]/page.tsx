@@ -2,15 +2,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import StoryPlayButton from "@/components/StoryPlayButton";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getUserDeck } from "@/lib/decks/repository";
 import { getStoryChapter } from "@/lib/stories/repository";
 
 /**
  * ストーリー章詳細ページ(サーバーコンポーネント)。
  *
  * `lib/stories/repository.ts` の `getStoryChapter(id, userId)` を直接呼び出し、
- * 章のあらすじ(大枠)を表示する。ログイン中でまだプレイしていない場合は
- * `StoryPlayButton`(クライアントコンポーネント)を表示し、既にプレイ済みの場合は
- * AIが生成した個別化ストーリー本文をそのまま表示する(振り返り)。
+ * 章のあらすじ(大枠)を表示する。ログイン中でまだプレイしていない場合、
+ * ユーザーの専用デッキ(`lib/decks/repository.ts` の `getUserDeck`、
+ * 追加機能20260707「ユーザー専用のデッキ」対応)が無ければ先に作成するよう案内し、
+ * あれば仲間キャラクター一覧を添えて `StoryPlayButton`(クライアントコンポーネント)を
+ * 表示する。既にプレイ済みの場合はAIが生成した個別化ストーリー本文をそのまま表示する
+ * (振り返り)。
  */
 
 /** MySQLの `DATETIME`("YYYY-MM-DD HH:MM:SS"、UTC)を日本語表記に整形する。 */
@@ -45,6 +49,9 @@ export default async function StoryDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  const deck = user ? await getUserDeck(user.id) : null;
+  const roster = deck ? [...deck.front, ...deck.bench] : [];
+
   return (
     <div>
       <div className="page-header">
@@ -69,12 +76,32 @@ export default async function StoryDetailPage({ params }: PageProps) {
         </div>
       )}
 
-      {user && !chapter.play && (
+      {user && !deck && !chapter.play && (
         <div className="card story-detail__start" style={{ marginTop: "1.5rem" }}>
           <p style={{ marginBottom: "1rem" }}>
-            {user.username}さんが主人公として活躍する物語をAIが書き下ろします。一度生成した内容は、
-            この章のページからいつでも読み返せます。
+            ストーリーを進めるには、あなた専用のデッキが必要です。先にデッキを編成してください
+            (このデッキの仲間たちが物語に登場します)。
           </p>
+          <Link href="/decks/new" className="button button-primary">
+            専用デッキを作成する
+          </Link>
+        </div>
+      )}
+
+      {user && deck && !chapter.play && (
+        <div className="card story-detail__start" style={{ marginTop: "1.5rem" }}>
+          <p style={{ marginBottom: "1rem" }}>
+            {user.username}さんが主人公として活躍する物語をAIが書き下ろします。デッキ「{deck.name}」の
+            仲間の中から話に合う人物が登場します。一度生成した内容は、この章のページからいつでも
+            読み返せます。
+          </p>
+          {roster.length > 0 && (
+            <ul className="story-detail__roster">
+              {roster.map((character) => (
+                <li key={character.id}>{character.name}</li>
+              ))}
+            </ul>
+          )}
           <StoryPlayButton chapterId={chapter.id} />
         </div>
       )}

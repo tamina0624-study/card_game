@@ -55,10 +55,15 @@ function toCharacterNotFoundError(error: BridgeError): CharacterNotFoundError {
  * `decks` へのINSERTと `deck_cards` への一括INSERTはPHPブリッジ側(`php/decks.php`)で
  * 単一トランザクションとして実行される。存在しない `characterId` があれば
  * {@link CharacterNotFoundError} を投げる。
+ *
+ * `userId`(ログイン中ユーザーのid、`lib/auth/session.ts` の `getCurrentUser` で解決した値)を
+ * 指定すると `decks.user_id` に保存され、そのユーザーの専用デッキ(`getUserDeck` で取得できる
+ * デッキ)になる。未ログインの場合は呼び出し元で省略すればよい(共有プールのデッキとして
+ * 誰にも紐付かない、従来通りの挙動)。
  */
-export async function createDeck(input: DeckInput): Promise<Deck> {
+export async function createDeck(input: DeckInput, userId?: number): Promise<Deck> {
   try {
-    return await callBridge<Deck>("decks.php", { method: "POST", body: input });
+    return await callBridge<Deck>("decks.php", { method: "POST", body: { ...input, userId } });
   } catch (error) {
     if (error instanceof BridgeError && error.code === "CHARACTER_NOT_FOUND") {
       throw toCharacterNotFoundError(error);
@@ -79,6 +84,23 @@ export async function listDecks(): Promise<DeckSummary[]> {
 export async function getDeckById(id: number): Promise<Deck | null> {
   try {
     return await callBridge<Deck>("decks.php", { query: { id } });
+  } catch (error) {
+    if (error instanceof BridgeError && error.status === 404 && error.code === null) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+/**
+ * 指定ユーザーの専用デッキ(`decks.user_id`が一致する、最も新しく作成した1件)を
+ * front/bench全情報付きで取得する。まだ1件も作成していない場合は `null` を返す
+ * (追加機能20260707「ユーザー専用のデッキ」対応。複数作成していた場合は
+ * 最新の1件のみを「専用デッキ」として扱う設計、`php/decks.php`参照)。
+ */
+export async function getUserDeck(userId: number): Promise<Deck | null> {
+  try {
+    return await callBridge<Deck>("decks.php", { query: { userId } });
   } catch (error) {
     if (error instanceof BridgeError && error.status === 404 && error.code === null) {
       return null;

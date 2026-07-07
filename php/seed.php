@@ -50,7 +50,7 @@ $pdo->beginTransaction();
 
 try {
     $insertCharacter = $pdo->prepare(
-        'INSERT INTO characters (name, description, image_url, total_points) VALUES (?, ?, ?, ?)'
+        'INSERT INTO characters (name, description, image_url, total_points, is_system) VALUES (?, ?, ?, ?, ?)'
     );
     $insertParameter = $pdo->prepare(
         'INSERT INTO character_parameters (character_id, name, value, sort_order) VALUES (?, ?, ?, ?)'
@@ -75,12 +75,14 @@ try {
         }
 
         $imageUrl = isset($character['imageUrl']) ? $assetBase . $character['imageUrl'] : null;
+        $isSystem = !empty($character['isSystem']) ? 1 : 0;
 
         $insertCharacter->execute([
             $character['name'],
             $character['description'],
             $imageUrl,
             $totalPoints,
+            $isSystem,
         ]);
         $characterId = (int) $pdo->lastInsertId();
         $nameToId[$character['name']] = $characterId;

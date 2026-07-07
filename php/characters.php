@@ -5,9 +5,12 @@
  *
  * GET(id無し)    = 一覧(`listCharacters`、全件の全情報を返す。サマリ変換はNext.js側で行う)
  * GET(id=)       = 詳細(`getCharacterById`)
- * POST           = 作成(`createCharacter`)
- * PUT(id=)       = 更新(`updateCharacter`)
- * DELETE(id=)    = 削除(`deleteCharacter`、使用中の場合は409 `CHARACTER_IN_USE`)
+ * POST           = 作成(`createCharacter`、`isSystem: true` を渡すと編集・削除不可の
+ *                    システムキャラクターとして登録できる)
+ * PUT(id=)       = 更新(`updateCharacter`、対象がシステムキャラクターの場合は403
+ *                    `SYSTEM_CHARACTER_LOCKED`)
+ * DELETE(id=)    = 削除(`deleteCharacter`、システムキャラクターの場合は403
+ *                    `SYSTEM_CHARACTER_LOCKED`、使用中の場合は409 `CHARACTER_IN_USE`)
  */
 
 require_once __DIR__ . '/config.php';
@@ -40,17 +43,21 @@ if ($method === 'GET' && $id !== null) {
 if ($method === 'POST') {
     $input = read_json_body();
     $totalPoints = compute_total_points($input['parameters'] ?? []);
+    // システムキャラクター登録用フラグ(通常のキャラクター作成画面からは送られない、
+    // 運営が直接APIを叩いて固定キャラクターを登録する際に使う)。
+    $isSystem = !empty($input['isSystem']) ? 1 : 0;
 
     $pdo->beginTransaction();
     try {
         $stmt = $pdo->prepare(
-            'INSERT INTO characters (name, description, image_url, total_points) VALUES (?, ?, ?, ?)'
+            'INSERT INTO characters (name, description, image_url, total_points, is_system) VALUES (?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $input['name'],
             $input['description'] ?? null,
             $input['imageUrl'] ?? null,
             $totalPoints,
+            $isSystem,
         ]);
         $characterId = (int) $pdo->lastInsertId();
         replace_parameters_and_moves($pdo, $characterId, $input);
@@ -69,10 +76,18 @@ if ($method === 'PUT' && $id !== null) {
     $input = read_json_body();
     $totalPoints = compute_total_points($input['parameters'] ?? []);
 
-    $stmt = $pdo->prepare('SELECT id FROM characters WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT id, is_system FROM characters WHERE id = ?');
     $stmt->execute([$id]);
-    if (!$stmt->fetch()) {
+    $existing = $stmt->fetch();
+    if (!$existing) {
         json_error('キャラクターが見つかりません。', 404);
+    }
+    if ((int) $existing['is_system'] === 1) {
+        json_error(
+            "キャラクター(id={$id})はシステムキャラクターのため編集できません。",
+            403,
+            'SYSTEM_CHARACTER_LOCKED'
+        );
     }
 
     $pdo->beginTransaction();
@@ -101,11 +116,20 @@ if ($method === 'PUT' && $id !== null) {
 if ($method === 'DELETE' && $id !== null) {
     $pdo->beginTransaction();
     try {
-        $stmt = $pdo->prepare('SELECT id FROM characters WHERE id = ?');
+        $stmt = $pdo->prepare('SELECT id, is_system FROM characters WHERE id = ?');
         $stmt->execute([$id]);
-        if (!$stmt->fetch()) {
+        $existing = $stmt->fetch();
+        if (!$existing) {
             $pdo->rollBack();
             json_error('キャラクターが見つかりません。', 404);
+        }
+        if ((int) $existing['is_system'] === 1) {
+            $pdo->rollBack();
+            json_error(
+                "キャラクター(id={$id})はシステムキャラクターのため削除できません。",
+                403,
+                'SYSTEM_CHARACTER_LOCKED'
+            );
         }
 
         $stmt = $pdo->prepare('SELECT 1 FROM deck_cards WHERE character_id = ? LIMIT 1');

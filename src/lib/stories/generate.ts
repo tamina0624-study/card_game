@@ -7,21 +7,29 @@
  */
 
 import { callWithSystemPrompt } from "@/lib/claude/client";
-import { buildStoryPrompt, extractStoryContent, STORY_SYSTEM_PROMPT } from "@/lib/stories/prompt";
+import {
+  buildStoryPrompt,
+  extractStoryContent,
+  STORY_SYSTEM_PROMPT,
+  type StoryRosterMember,
+} from "@/lib/stories/prompt";
 
 /**
- * 章タイトル・あらすじ・プレイヤー名から個別化ストーリー本文を生成する。
- * `content`(表示用の物語本文)と`rawText`(監査用の、採用した方の生応答)を返す。
- * 2回とも`{"story": "..."}`としてパースできなかった場合は、2回目の生応答を
- * 前後の空白を除いてそのままフォールバックとして使う(空応答は避けるが、
- * 内容の品質は保証しない)。APIが投げる例外はそのまま呼び出し元に伝播させる。
+ * 章タイトル・あらすじ・プレイヤー名・専用デッキの仲間キャラクター一覧から
+ * 個別化ストーリー本文を生成する。`content`(表示用の物語本文)と`rawText`
+ * (監査用の、採用した方の生応答)を返す。2回とも`{"story": "..."}`として
+ * パースできなかった場合は、2回目の生応答を前後の空白を除いてそのまま
+ * フォールバックとして使う(空応答は避けるが、内容の品質は保証しない)。
+ * APIが投げる例外はそのまま呼び出し元に伝播させる。
  */
 export async function generateStoryContent(
   chapterTitle: string,
   outline: string,
-  username: string
+  username: string,
+  deckName: string,
+  roster: StoryRosterMember[]
 ): Promise<{ content: string; rawText: string }> {
-  const prompt = buildStoryPrompt(chapterTitle, outline, username);
+  const prompt = buildStoryPrompt(chapterTitle, outline, username, deckName, roster);
 
   const firstRawText = await callWithSystemPrompt(STORY_SYSTEM_PROMPT, prompt, 6000);
   const firstContent = extractStoryContent(firstRawText);

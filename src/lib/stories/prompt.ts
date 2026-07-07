@@ -27,7 +27,10 @@ export const STORY_SYSTEM_PROMPT = `detailed thinking off
 必ず守ること:
 1. あらすじに含まれる展開・出来事・結末の大筋は変えない(ストーリー都合で改変しない)。
 2. プレイヤー名を主人公の名前として使い、プレイヤー自身の活躍が伝わる描写を加える。
-3. 3〜6段落程度の読み物として自然な日本語の文章にする(文字数を数える必要はない)。
+3. プレイヤーの「仲間キャラクター一覧」が提示された場合、その中から話の展開に合う人物を
+   何人でも自由に選んで登場させ、活躍させる(全員を登場させる必要はない。誰を登場させ、
+   どう活躍させるかは自由に判断してよい)。一覧が無い場合や空の場合は主人公単独の物語にする。
+4. 3〜6段落程度の読み物として自然な日本語の文章にする(文字数を数える必要はない)。
 
 出力形式に関する絶対的なルール(違反禁止):
 - 出力は次のJSON形式のみとする: {"story": "物語本文"}
@@ -35,19 +38,42 @@ export const STORY_SYSTEM_PROMPT = `detailed thinking off
   Markdownのコードフェンス等)は一切出力しない。出力1文字目から "{" で始めること。
 - "story" の値の中に改行を含めてよいが、JSON文字列として正しくエスケープすること。`;
 
+/** プロンプトに含める仲間キャラクター1体分(デッキの前衛/控え、`lib/stories/generate.ts`参照)。 */
+export type StoryRosterMember = { name: string; description: string | null };
+
+/** 仲間キャラクター一覧をプロンプト用の番号付き列挙テキストに整形する。0件の場合は明示的にその旨を書く。 */
+function formatRoster(roster: StoryRosterMember[]): string {
+  if (roster.length === 0) {
+    return "(登録されているキャラクターがいません)";
+  }
+  return roster
+    .map((member, index) => `${index + 1}. ${member.name}${member.description ? ` - ${member.description}` : ""}`)
+    .join("\n");
+}
+
 /**
- * 章タイトル・あらすじ(大枠)・プレイヤー名からユーザーメッセージを構築する。
- * このモジュール自身はAI呼び出しを行わない(`lib/stories/generate.ts`が担当)。
+ * 章タイトル・あらすじ(大枠)・プレイヤー名・専用デッキの仲間キャラクター一覧から
+ * ユーザーメッセージを構築する。このモジュール自身はAI呼び出しを行わない
+ * (`lib/stories/generate.ts`が担当)。
  */
-export function buildStoryPrompt(chapterTitle: string, outline: string, username: string): string {
+export function buildStoryPrompt(
+  chapterTitle: string,
+  outline: string,
+  username: string,
+  deckName: string,
+  roster: StoryRosterMember[]
+): string {
   return [
     `プレイヤー名: ${username}`,
+    `プレイヤーの専用デッキ「${deckName}」の仲間キャラクター一覧:`,
+    formatRoster(roster),
     `章タイトル: ${chapterTitle}`,
     `あらすじ(大枠):`,
     outline,
     "",
-    `上記のあらすじを、「${username}」が主人公として活躍する物語本文に書き直し、` +
-      `下書きや文字数の検討は行わず、{"story": "物語本文"} というJSON形式のみをそのまま出力してください。`,
+    `上記のあらすじを、「${username}」が主人公として活躍し、必要に応じて上記の仲間キャラクターの` +
+      `中から話に合う人物を選んで活躍させる物語本文に書き直し、下書きや文字数の検討は行わず、` +
+      `{"story": "物語本文"} というJSON形式のみをそのまま出力してください。`,
   ].join("\n");
 }
 

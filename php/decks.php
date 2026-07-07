@@ -3,11 +3,15 @@
 /**
  * デッキCRUDエンドポイント(`src/lib/decks/repository.ts` のPHP版)。
  *
- * GET(id無し)    = 一覧(`listDecks`、概要DTOのみ)
- * GET(id=)       = 詳細(`getDeckById`、front/bench各4体のキャラクター全情報を含む)
- * POST           = 作成(`createDeck`、characterId不在時は400 `CHARACTER_NOT_FOUND`)
- * PUT(id=)       = 更新(`updateDeck`)
- * DELETE(id=)    = 削除(`deleteDeck`、使用中の場合は409 `DECK_IN_USE`)
+ * GET(id無し, userId無し) = 一覧(`listDecks`、概要DTOのみ)
+ * GET(id無し, userId=)    = そのユーザーの専用デッキ(`getUserDeck`、最も新しく作成した
+ *                           1件をfront/bench全情報付きで返す。無ければ404)
+ * GET(id=)               = 詳細(`getDeckById`、front/bench各4体のキャラクター全情報を含む)
+ * POST                   = 作成(`createDeck`、characterId不在時は400 `CHARACTER_NOT_FOUND`。
+ *                           `userId`(ログイン中ユーザーのid)が指定されていれば
+ *                           `decks.user_id` に保存し、そのユーザーの専用デッキとする)
+ * PUT(id=)               = 更新(`updateDeck`。`user_id`は作成時のまま変更しない)
+ * DELETE(id=)            = 削除(`deleteDeck`、使用中の場合は409 `DECK_IN_USE`)
  */
 
 require_once __DIR__ . '/config.php';
@@ -93,11 +97,24 @@ function find_deck_by_id(PDO $pdo, int $id): ?array
         'id' => (int) $row['id'],
         'name' => $row['name'],
         'ownerName' => $row['owner_name'],
+        'userId' => $row['user_id'] !== null ? (int) $row['user_id'] : null,
         'front' => $front,
         'bench' => $bench,
         'createdAt' => $row['created_at'],
         'updatedAt' => $row['updated_at'],
     ];
+}
+
+$userId = isset($_GET['userId']) ? (int) $_GET['userId'] : null;
+
+if ($method === 'GET' && $id === null && $userId !== null) {
+    $stmt = $pdo->prepare('SELECT id FROM decks WHERE user_id = ? ORDER BY id DESC LIMIT 1');
+    $stmt->execute([$userId]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        json_error('専用デッキがまだ作成されていません。', 404);
+    }
+    json_response(find_deck_by_id($pdo, (int) $row['id']));
 }
 
 if ($method === 'GET' && $id === null) {
@@ -125,8 +142,12 @@ if ($method === 'POST') {
 
     $pdo->beginTransaction();
     try {
-        $pdo->prepare('INSERT INTO decks (name, owner_name) VALUES (?, ?)')
-            ->execute([$input['name'], $input['ownerName'] ?? null]);
+        $pdo->prepare('INSERT INTO decks (name, owner_name, user_id) VALUES (?, ?, ?)')
+            ->execute([
+                $input['name'],
+                $input['ownerName'] ?? null,
+                isset($input['userId']) && $input['userId'] !== null ? (int) $input['userId'] : null,
+            ]);
         $deckId = (int) $pdo->lastInsertId();
         insert_deck_cards($pdo, $deckId, $input['cards']);
         $pdo->commit();

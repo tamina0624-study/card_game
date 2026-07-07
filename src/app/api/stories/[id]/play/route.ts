@@ -5,15 +5,19 @@ export const runtime = "nodejs";
  *
  * ログインが必要(未ログインは401)。既にAI生成済みの本文がある場合は
  * そのまま返す(冪等、振り返り時に内容が変わらないようにするため再生成はしない)。
- * 未生成の場合のみ、章の大枠(`outline`)とログインユーザー名から
- * `lib/stories/generate.ts` でAIに個別化ストーリー本文を生成させ、
- * `lib/stories/repository.ts` の `saveStoryPlay` で保存する。
+ * 未生成の場合のみ、ログインユーザーの専用デッキ(`lib/decks/repository.ts` の
+ * `getUserDeck`)を取得し(無ければ400、`/decks/new`で先に作成してもらう)、
+ * 章の大枠(`outline`)・ユーザー名・デッキの仲間キャラクター一覧から
+ * `lib/stories/generate.ts` でAIに個別化ストーリー本文を生成させる
+ * (追加機能20260707「デッキのメンバーで誰が登場するかはAIにお任せ」対応)。
+ * 生成結果は `lib/stories/repository.ts` の `saveStoryPlay` で保存する。
  *
  * AI呼び出しに失敗した場合は502(`docs/設計.md` 3章のバトル実行APIと同じ方針)。
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getUserDeck } from "@/lib/decks/repository";
 import { generateStoryContent } from "@/lib/stories/generate";
 import { getStoryChapter, saveStoryPlay } from "@/lib/stories/repository";
 
@@ -49,8 +53,27 @@ export async function POST(_request: NextRequest, context: RouteContext) {
     return NextResponse.json(chapter.play, { status: 200 });
   }
 
+  const deck = await getUserDeck(user.id);
+  if (!deck) {
+    return NextResponse.json(
+      { error: "ストーリーを進めるには先に自分専用のデッキを作成してください。", code: "NO_DECK" },
+      { status: 400 }
+    );
+  }
+
+  const roster = [...deck.front, ...deck.bench].map((character) => ({
+    name: character.name,
+    description: character.description,
+  }));
+
   try {
-    const { content, rawText } = await generateStoryContent(chapter.title, chapter.outline, user.username);
+    const { content, rawText } = await generateStoryContent(
+      chapter.title,
+      chapter.outline,
+      user.username,
+      deck.name,
+      roster
+    );
     const play = await saveStoryPlay(user.id, id, content, rawText);
     return NextResponse.json(play, { status: 201 });
   } catch (error) {

@@ -48,6 +48,7 @@ function assemble_character(PDO $pdo, array $row): array
         'description' => $row['description'],
         'imageUrl' => $row['image_url'],
         'totalPoints' => (int) $row['total_points'],
+        'isSystem' => (bool) $row['is_system'],
         'parameters' => array_values($parameters),
         'specialMoves' => array_values($specialMoves),
         'createdAt' => $row['created_at'],

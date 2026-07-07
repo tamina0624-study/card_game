@@ -10,6 +10,7 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import {
   CharacterInUseError,
+  SystemCharacterLockedError,
   deleteCharacter,
   getCharacterById,
   updateCharacter,
@@ -76,12 +77,19 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     );
   }
 
-  const character = await updateCharacter(id, result.data);
-  if (!character) {
-    return NextResponse.json({ error: "キャラクターが見つかりません。" }, { status: 404 });
-  }
+  try {
+    const character = await updateCharacter(id, result.data);
+    if (!character) {
+      return NextResponse.json({ error: "キャラクターが見つかりません。" }, { status: 404 });
+    }
 
-  return NextResponse.json(character, { status: 200 });
+    return NextResponse.json(character, { status: 200 });
+  } catch (error) {
+    if (error instanceof SystemCharacterLockedError) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
+    throw error;
+  }
 }
 
 /**
@@ -105,6 +113,9 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
   } catch (error) {
     if (error instanceof CharacterInUseError) {
       return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+    if (error instanceof SystemCharacterLockedError) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
     }
     throw error;
   }

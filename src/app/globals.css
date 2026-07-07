@@ -287,6 +287,12 @@ button:disabled,
   color: var(--muted);
 }
 
+.badge--system {
+  background: rgba(120, 130, 220, 0.14);
+  border-color: #7b86dd;
+  color: #aab2f0;
+}
+
 .page-header {
   display: flex;
   flex-wrap: wrap;
@@ -2235,6 +2241,24 @@ select:focus {
 }
 
 .story-detail__start p {
+  color: var(--muted);
+}
+
+.story-detail__roster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  margin-bottom: 1.25rem;
+  padding: 0;
+}
+
+.story-detail__roster li {
+  background: rgba(217, 182, 86, 0.12);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.85rem;
   color: var(--muted);
 }
 

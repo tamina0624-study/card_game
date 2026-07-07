@@ -71,6 +71,13 @@ export type Character = {
   description: string | null;
   imageUrl: string | null;
   totalPoints: number;
+  /**
+   * システム(運営)側が登録した固定キャラクターかどうか。trueの場合、
+   * `PUT`/`DELETE /api/characters/:id` はサーバー側(PHPブリッジ)で403
+   * `SYSTEM_CHARACTER_LOCKED` として拒否される(編集画面でのパラメーター
+   * 強化・削除を防ぐため)。
+   */
+  isSystem: boolean;
   parameters: CharacterParameter[];
   specialMoves: SpecialMove[];
   createdAt: string;
@@ -89,6 +96,7 @@ export type CharacterSummary = {
   description: string | null;
   imageUrl: string | null;
   totalPoints: number;
+  isSystem: boolean;
   parameterCount: number;
   specialMoveCount: number;
   createdAt: string;
@@ -138,6 +146,12 @@ export type Deck = {
   id: number;
   name: string;
   ownerName: string | null;
+  /**
+   * このデッキを作成した(ログイン中に作成した)ユーザーのid。未ログインで
+   * 作成された場合は `null`(追加機能20260707「ユーザー専用のデッキ」対応、
+   * `lib/decks/repository.ts` の `getUserDeck` 参照)。
+   */
+  userId: number | null;
   front: Character[];
   bench: Character[];
   createdAt: string;

@@ -51,15 +51,24 @@ export default async function CharactersPage() {
                 <div className="character-card__stats">
                   <span className="badge">合計 {character.totalPoints}pt</span>
                   <span className="badge">必殺技 {character.specialMoveCount}個</span>
+                  {character.isSystem && <span className="badge badge--system">システム</span>}
                 </div>
                 <div className="card-actions">
-                  <Link href={`/characters/${character.id}/edit`} className="button button-secondary">
-                    編集
-                  </Link>
-                  <DeleteButton
-                    endpoint={`/api/characters/${character.id}`}
-                    confirmMessage={`「${character.name}」を削除しますか?この操作は取り消せません。`}
-                  />
+                  {character.isSystem ? (
+                    <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
+                      システムキャラクターのため編集・削除できません。
+                    </p>
+                  ) : (
+                    <>
+                      <Link href={`/characters/${character.id}/edit`} className="button button-secondary">
+                        編集
+                      </Link>
+                      <DeleteButton
+                        endpoint={`/api/characters/${character.id}`}
+                        confirmMessage={`「${character.name}」を削除しますか?この操作は取り消せません。`}
+                      />
+                    </>
+                  )}
                 </div>
               </div>
             ))}
