@@ -65,9 +65,29 @@ function buildQueryString(query: CallBridgeOptions["query"]): string {
   );
 }
 
+/**
+ * PHPブリッジ以外(ホスティングの404ページ・PHPの致命的エラーが吐くHTML等)が
+ * 返ってきた場合、素の `JSON.parse` は `SyntaxError` を投げてしまい原因が分かりにくい。
+ * ここで捕捉し、`status`/本文冒頭を含む {@link BridgeError} に変換する
+ * (`code: "INVALID_JSON_RESPONSE"` は呼び出し元の「404=not found」判定と衝突しないよう
+ * 専用の値にしている。`repository.ts` 側の404判定は `code === null` も条件に含めること)。
+ */
 async function parseJsonBody(response: Response): Promise<unknown> {
   const text = await response.text();
-  return text ? JSON.parse(text) : null;
+  if (!text) {
+    return null;
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new BridgeError(
+      `PHPブリッジからJSON以外の応答が返されました(status=${response.status}, url=${response.url})。` +
+        `ブリッジが未デプロイ、URL設定が誤っている、またはPHP側でエラーが発生している可能性があります。`,
+      response.status,
+      "INVALID_JSON_RESPONSE",
+      { rawBodyPreview: text.slice(0, 500) }
+    );
+  }
 }
 
 function toBridgeError(status: number, data: unknown): BridgeError {

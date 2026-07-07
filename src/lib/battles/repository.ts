@@ -106,7 +106,7 @@ export async function getBattleDetail(id: number): Promise<BattleDetail | null> 
   try {
     return await callBridge<BattleDetail>("battles.php", { query: { id } });
   } catch (error) {
-    if (error instanceof BridgeError && error.status === 404) {
+    if (error instanceof BridgeError && error.status === 404 && error.code === null) {
       return null;
     }
     throw error;

@@ -62,7 +62,7 @@ export async function getCharacterById(id: number): Promise<Character | null> {
   try {
     return await callBridge<Character>("characters.php", { query: { id } });
   } catch (error) {
-    if (error instanceof BridgeError && error.status === 404) {
+    if (error instanceof BridgeError && error.status === 404 && error.code === null) {
       return null;
     }
     throw error;
@@ -77,7 +77,7 @@ export async function updateCharacter(id: number, input: CharacterInput): Promis
   try {
     return await callBridge<Character>("characters.php", { method: "PUT", query: { id }, body: input });
   } catch (error) {
-    if (error instanceof BridgeError && error.status === 404) {
+    if (error instanceof BridgeError && error.status === 404 && error.code === null) {
       return null;
     }
     throw error;
@@ -96,7 +96,7 @@ export async function deleteCharacter(id: number): Promise<boolean> {
     await callBridge<null>("characters.php", { method: "DELETE", query: { id } });
     return true;
   } catch (error) {
-    if (error instanceof BridgeError && error.status === 404) {
+    if (error instanceof BridgeError && error.status === 404 && error.code === null) {
       return false;
     }
     if (error instanceof BridgeError && error.code === "CHARACTER_IN_USE") {

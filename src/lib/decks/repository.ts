@@ -80,7 +80,7 @@ export async function getDeckById(id: number): Promise<Deck | null> {
   try {
     return await callBridge<Deck>("decks.php", { query: { id } });
   } catch (error) {
-    if (error instanceof BridgeError && error.status === 404) {
+    if (error instanceof BridgeError && error.status === 404 && error.code === null) {
       return null;
     }
     throw error;
@@ -96,7 +96,7 @@ export async function updateDeck(id: number, input: DeckInput): Promise<Deck | n
   try {
     return await callBridge<Deck>("decks.php", { method: "PUT", query: { id }, body: input });
   } catch (error) {
-    if (error instanceof BridgeError && error.status === 404) {
+    if (error instanceof BridgeError && error.status === 404 && error.code === null) {
       return null;
     }
     if (error instanceof BridgeError && error.code === "CHARACTER_NOT_FOUND") {
@@ -118,7 +118,7 @@ export async function deleteDeck(id: number): Promise<boolean> {
     await callBridge<null>("decks.php", { method: "DELETE", query: { id } });
     return true;
   } catch (error) {
-    if (error instanceof BridgeError && error.status === 404) {
+    if (error instanceof BridgeError && error.status === 404 && error.code === null) {
       return false;
     }
     if (error instanceof BridgeError && error.code === "DECK_IN_USE") {
