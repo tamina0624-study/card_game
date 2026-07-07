@@ -3,9 +3,12 @@
 /**
  * デッキCRUDエンドポイント(`src/lib/decks/repository.ts` のPHP版)。
  *
- * GET(id無し, userId無し) = 一覧(`listDecks`、概要DTOのみ)
+ * GET(id無し, userId無し, ownerId無し) = 一覧(`listDecks`、概要DTOのみ、全ユーザー分)
  * GET(id無し, userId=)    = そのユーザーの専用デッキ(`getUserDeck`、最も新しく作成した
  *                           1件をfront/bench全情報付きで返す。無ければ404)
+ * GET(id無し, ownerId=)   = 指定ユーザーが作成したデッキの一覧(`listDecks(ownerId)`、
+ *                           概要DTOのみ。デッキ作成・編集画面の一覧はこちらを使い、
+ *                           他ユーザーのデッキが混ざらないようにする)
  * GET(id=)               = 詳細(`getDeckById`、front/bench各4体のキャラクター全情報を含む)
  * POST                   = 作成(`createDeck`、characterId不在時は400 `CHARACTER_NOT_FOUND`。
  *                           `userId`(ログイン中ユーザーのid)が指定されていれば
@@ -106,6 +109,7 @@ function find_deck_by_id(PDO $pdo, int $id): ?array
 }
 
 $userId = isset($_GET['userId']) ? (int) $_GET['userId'] : null;
+$ownerId = isset($_GET['ownerId']) ? (int) $_GET['ownerId'] : null;
 
 if ($method === 'GET' && $id === null && $userId !== null) {
     $stmt = $pdo->prepare('SELECT id FROM decks WHERE user_id = ? ORDER BY id DESC LIMIT 1');
@@ -115,6 +119,20 @@ if ($method === 'GET' && $id === null && $userId !== null) {
         json_error('専用デッキがまだ作成されていません。', 404);
     }
     json_response(find_deck_by_id($pdo, (int) $row['id']));
+}
+
+if ($method === 'GET' && $id === null && $ownerId !== null) {
+    $stmt = $pdo->prepare(
+        'SELECT id, name, owner_name, created_at FROM decks WHERE user_id = ? ORDER BY id ASC'
+    );
+    $stmt->execute([$ownerId]);
+    $rows = $stmt->fetchAll();
+    json_response(array_map(fn($row) => [
+        'id' => (int) $row['id'],
+        'name' => $row['name'],
+        'ownerName' => $row['owner_name'],
+        'createdAt' => $row['created_at'],
+    ], $rows));
 }
 
 if ($method === 'GET' && $id === null) {

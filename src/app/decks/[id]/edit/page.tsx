@@ -1,12 +1,15 @@
 import { notFound } from "next/navigation";
 import DeckForm from "@/components/DeckForm";
 import { getDeckById } from "@/lib/decks/repository";
+import { getCurrentUser } from "@/lib/auth/session";
 
 /**
  * デッキ編集ページ(サーバーコンポーネント)。
  * `lib/decks/repository.ts` を直接呼び出し(`src/app/decks/page.tsx` と同じく
  * hairpin fetchを避ける方針)、既存の前衛/控え構成を `DeckForm`(`mode="edit"`)へ渡す。
- * idが不正、または対象が存在しない場合は404。
+ * idが不正、対象が存在しない、または `deck.userId` がログイン中ユーザーと一致しない
+ * (＝自分が作成したデッキではない、未ログイン含む)場合は404。存在有無を含めて
+ * 他ユーザーのデッキを一切見せない(`src/app/decks/page.tsx` の一覧フィルタと対の対応)。
  */
 export const dynamic = "force-dynamic";
 
@@ -19,8 +22,8 @@ export default async function EditDeckPage({ params }: PageProps) {
   if (!/^\d+$/.test(idParam)) {
     notFound();
   }
-  const deck = await getDeckById(Number(idParam));
-  if (!deck) {
+  const [deck, user] = await Promise.all([getDeckById(Number(idParam)), getCurrentUser()]);
+  if (!deck || !user || deck.userId !== user.id) {
     notFound();
   }
 

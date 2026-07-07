@@ -5,6 +5,10 @@ export const runtime = "nodejs";
  * `DELETE /api/decks/:id` (削除) のRoute Handler。
  *
  * SQLite(`better-sqlite3`)を同期的に利用するため `runtime = "nodejs"` を明示する。
+ *
+ * `GET` は対戦相手デッキ選択(`BattleSetupForm`)からも呼ばれるため所有者を問わず
+ * 参照可能なままとする一方、`PUT`/`DELETE`(編集・削除)はログイン中ユーザーが
+ * 作成したデッキのみ許可する(`ensureOwnDeckOr404`)。
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -16,6 +20,7 @@ import {
   updateDeck,
 } from "@/lib/decks/repository";
 import { validateDeckInput } from "@/lib/decks/validation";
+import { getCurrentUser } from "@/lib/auth/session";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -26,6 +31,20 @@ function parseDeckId(idParam: string): number | null {
   }
   const id = Number(idParam);
   return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+/**
+ * PUT/DELETEの前に、ログイン中ユーザーが対象デッキの作成者であることを確認する。
+ * `src/app/decks/[id]/edit/page.tsx` の画面上のガードと対になる、APIを直接叩く経路
+ * (IDOR)への対策。対象が存在しない・未ログイン・所有者が異なる場合はいずれも
+ * 「見つからない」404として扱い、他ユーザーのデッキの存在有無を漏らさない。
+ */
+async function ensureOwnDeckOr404(id: number): Promise<NextResponse | null> {
+  const [deck, user] = await Promise.all([getDeckById(id), getCurrentUser()]);
+  if (!deck || !user || deck.userId !== user.id) {
+    return NextResponse.json({ error: "デッキが見つかりません。" }, { status: 404 });
+  }
+  return null;
 }
 
 /** デッキ詳細(front/bench各4体のキャラクター全情報)を取得する。存在しない場合は404。 */
@@ -78,6 +97,11 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     );
   }
 
+  const forbidden = await ensureOwnDeckOr404(id);
+  if (forbidden) {
+    return forbidden;
+  }
+
   try {
     const deck = await updateDeck(id, result.data);
     if (!deck) {
@@ -102,6 +126,11 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
   const id = parseDeckId(idParam);
   if (id === null) {
     return NextResponse.json({ error: "idが不正です。" }, { status: 400 });
+  }
+
+  const forbidden = await ensureOwnDeckOr404(id);
+  if (forbidden) {
+    return forbidden;
   }
 
   try {

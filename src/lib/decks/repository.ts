@@ -72,9 +72,14 @@ export async function createDeck(input: DeckInput, userId?: number): Promise<Dec
   }
 }
 
-/** デッキ一覧を取得する(概要情報のみ: id/name/ownerName/createdAt)。 */
-export async function listDecks(): Promise<DeckSummary[]> {
-  return callBridge<DeckSummary[]>("decks.php");
+/**
+ * デッキ一覧を取得する(概要情報のみ: id/name/ownerName/createdAt)。
+ * `ownerId` を指定すると、そのユーザー(`decks.user_id`)が作成したデッキのみに絞り込む
+ * (デッキ作成・編集画面での「自分のデッキだけ表示」対応。対戦相手デッキ選択など
+ * 全ユーザー分が必要な場面では省略し、従来通り全件を返す)。
+ */
+export async function listDecks(ownerId?: number): Promise<DeckSummary[]> {
+  return callBridge<DeckSummary[]>("decks.php", ownerId !== undefined ? { query: { ownerId } } : undefined);
 }
 
 /**
