@@ -1,7 +1,7 @@
 /**
  * PHPブリッジ(MySQLへのHTTP経由アクセス層、`php/` 配下)への共通クライアント。
  *
- * `PHP_BRIDGE_URL`(例: http://ss181301.stars.ne.jp/public_html/card_game/php)配下の
+ * `PHP_BRIDGE_URL`(例: http://ss181301.stars.ne.jp/card_game/php)配下の
  * 各エンドポイント(characters.php/decks.php/battles.php/upload.php)を `X-API-Key` 付きで
  * 呼び出す。エラー時はPHP側が返す `{ error, code, ... }` を保持した {@link BridgeError} を
  * 投げる。呼び出し元(各リポジトリの repository.ts)はこれを捕捉し、`code` に応じて

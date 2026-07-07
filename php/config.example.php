@@ -22,4 +22,4 @@ define('ADMIN_KEY', '');
 
 // --- 静的アセット -------------------------------------------------------------
 // アップロード画像・シードデータのimageUrlを組み立てる絶対URLのベース(末尾スラッシュなし)。
-define('ASSET_BASE_URL', 'http://ss181301.stars.ne.jp/public_html/card_game/public');
+define('ASSET_BASE_URL', 'http://ss181301.stars.ne.jp/card_game/public');

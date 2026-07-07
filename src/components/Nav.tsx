@@ -1,19 +1,24 @@
 import Link from "next/link";
+import LogoutButton from "@/components/LogoutButton";
+import { getCurrentUser } from "@/lib/auth/session";
 
 /**
- * サイト共通ナビゲーション。
+ * サイト共通ナビゲーション(サーバーコンポーネント)。
  *
- * トップ・キャラクター・デッキ・対戦の各セクションへの導線を提供する。
- * リンク先は docs/設計.md のディレクトリ構成に合わせたパス
- * (/characters, /decks, /battles)とし、各ページ自体は後続タスク
- * (13〜16)で実装する想定(現時点では未実装のため404になり得る)。
+ * トップ・キャラクター・デッキ・対戦・ストーリーの各セクションへの導線を提供する。
+ * `getCurrentUser()`(`lib/auth/session.ts`、Cookieのセッショントークンを
+ * PHPブリッジで検証する)を都度呼び出し、ログイン中はユーザー名+ログアウトボタン、
+ * 未ログインはログイン/新規登録リンクを出し分ける。
  */
-export default function Nav() {
+export default async function Nav() {
+  const user = await getCurrentUser();
+
   const links: { href: string; label: string }[] = [
     { href: "/", label: "トップ" },
     { href: "/characters", label: "キャラクター" },
     { href: "/decks", label: "デッキ" },
     { href: "/battles", label: "対戦" },
+    { href: "/stories", label: "ストーリー" },
   ];
 
   return (
@@ -32,6 +37,23 @@ export default function Nav() {
             ))}
           </ul>
         </nav>
+        <div className="site-header__auth">
+          {user ? (
+            <>
+              <span className="site-header__username">{user.username} さん</span>
+              <LogoutButton />
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="button button-secondary">
+                ログイン
+              </Link>
+              <Link href="/register" className="button button-primary">
+                新規登録
+              </Link>
+            </>
+          )}
+        </div>
       </div>
     </header>
   );

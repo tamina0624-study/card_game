@@ -221,3 +221,56 @@ export type BattleDetail = {
   createdAt: string;
   completedAt: string | null;
 };
+
+// --- ユーザー(追加機能20260707.md「ユーザー登録機能」) --------------------
+
+/** ログイン中のユーザー(パスワードは含まない、`GET /api/auth/me` 等の戻り値)。 */
+export type User = {
+  id: number;
+  username: string;
+  createdAt: string;
+};
+
+/**
+ * ユーザー登録直後のみ返る形状。`password` はアプリが自動生成した平文パスワードで、
+ * この応答でのみユーザーに提示される(以後は忘れた場合の問い合わせ
+ * `POST /api/auth/recover` で再確認する)。
+ */
+export type RegisteredUser = {
+  user: User;
+  password: string;
+};
+
+// --- ストーリー(追加機能20260707.md「ストーリー機能」) ---------------------
+
+/**
+ * ストーリー章の一覧・詳細表示用DTO。`outline` は開発者が投入する固定の大枠(あらすじ)、
+ * `playedAt` はログイン中ユーザーがこの章をプレイ済みの場合のみ日時が入る
+ * (未ログイン・未プレイの場合は `null`)。
+ */
+export type StoryChapterSummary = {
+  id: number;
+  chapterNumber: number;
+  title: string;
+  outline: string;
+  publishedAt: string;
+  playedAt: string | null;
+};
+
+/** ユーザーがAIに個別編集させた、その章の物語本文(一度生成されたら以後は同じ内容)。 */
+export type StoryPlay = {
+  chapterId: number;
+  content: string;
+  createdAt: string;
+};
+
+/** ストーリー章詳細(`play` はログイン中ユーザーがまだプレイしていない場合 `null`)。 */
+export type StoryChapterDetail = StoryChapterSummary & {
+  play: StoryPlay | null;
+};
+
+/** 振り返り一覧(`GET /api/stories/history`)1件分。 */
+export type StoryHistoryEntry = StoryPlay & {
+  chapterNumber: number;
+  chapterTitle: string;
+};

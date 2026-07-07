@@ -104,3 +104,62 @@ CREATE TABLE IF NOT EXISTS battle_events (
   CONSTRAINT fk_battle_events_battle
     FOREIGN KEY (battle_id) REFERENCES battles(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ユーザー(追加機能20260707.md「ユーザー登録機能」)。
+-- パスワードはアプリがランダムに生成した10文字英数字であり、ユーザー自身が選んだ
+-- 秘密情報ではないため、問い合わせ対応(本人からの再照会)に答えられるよう平文で保持する
+-- (このアプリの意図的な設計判断。ユーザーが使い回している可能性のある秘密のパスワードを
+-- 保存するわけではない)。
+CREATE TABLE IF NOT EXISTS users (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  username VARCHAR(50) NOT NULL,
+  password VARCHAR(20) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_users_username (username)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ログインセッション。Next.js側はセッショントークンをhttpOnly Cookieとして保持し、
+-- リクエスト毎にこのテーブルを引いてユーザーを解決する(トークン自体はランダムな
+-- 64文字の16進文字列で推測不可能、有効期限はログイン時に30日で設定する)。
+CREATE TABLE IF NOT EXISTS user_sessions (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  user_id INT NOT NULL,
+  token VARCHAR(64) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expires_at DATETIME NOT NULL,
+  UNIQUE KEY uniq_user_sessions_token (token),
+  KEY idx_user_sessions_user_id (user_id),
+  CONSTRAINT fk_user_sessions_user
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ストーリーの大枠(追加機能20260707.md「ストーリー機能」)。毎週追加される、
+-- 全ユーザー共通の固定シナリオ本体。管理者(開発者)が `stories.php`
+-- (action=create-chapter、ADMIN_KEY保護)経由で投入する。
+CREATE TABLE IF NOT EXISTS story_chapters (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  chapter_number INT NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  outline TEXT NOT NULL,
+  published_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_story_chapters_chapter_number (chapter_number)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ユーザーごとにAIが個別編集したストーリー本文。ログインユーザーが章を初めて
+-- プレイした時点で1件生成され、以後は同じ内容を再表示する(振り返り用の記録)。
+CREATE TABLE IF NOT EXISTS story_plays (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  user_id INT NOT NULL,
+  story_chapter_id INT NOT NULL,
+  content LONGTEXT NOT NULL,
+  raw_ai_response LONGTEXT,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_story_plays_user_chapter (user_id, story_chapter_id),
+  KEY idx_story_plays_user_id (user_id),
+  CONSTRAINT fk_story_plays_user
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_story_plays_chapter
+    FOREIGN KEY (story_chapter_id) REFERENCES story_chapters(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

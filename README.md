@@ -42,10 +42,10 @@ cp php/config.example.php php/config.php
 | `ANTHROPIC_MODEL` | No | `claude-opus-4-8` | AI審判に使用するモデルID |
 | `OPENROUTER_API_KEY` | No | — | 設定した場合、AI審判はOpenRouter経由(`OPENROUTER_MODEL`)で呼び出される(`ANTHROPIC_API_KEY`より優先)。Anthropicの有料キーが用意できない開発時の代替経路 |
 | `OPENROUTER_MODEL` | No | `nvidia/nemotron-3-nano-30b-a3b:free` | OpenRouter使用時のモデルID |
-| `PHP_BRIDGE_URL` | Yes | — | PHPブリッジのベースURL(例: `http://ss181301.stars.ne.jp/public_html/card_game/php`) |
+| `PHP_BRIDGE_URL` | Yes | — | PHPブリッジのベースURL(例: `http://ss181301.stars.ne.jp/card_game/php`) |
 | `PHP_BRIDGE_API_KEY` | Yes | — | 通常のCRUD用共有シークレット(`php/config.php`の`API_KEY`と一致させる) |
 | `PHP_BRIDGE_ADMIN_KEY` | Yes | — | `db:migrate`/`db:seed`(破壊的操作)専用シークレット(`php/config.php`の`ADMIN_KEY`と一致させる) |
-| `NEXT_PUBLIC_ASSET_BASE_URL` | No | `http://ss181301.stars.ne.jp/public_html/card_game/public` | 背景・サンプル画像・BGM・アップロード画像の配信元ベースURL |
+| `NEXT_PUBLIC_ASSET_BASE_URL` | No | `http://ss181301.stars.ne.jp/card_game/public` | 背景・サンプル画像・BGM・アップロード画像の配信元ベースURL |
 
 PHPブリッジ(`php/`配下)をMySQLが使えるホストに配置したうえで、DBを初期化し
 サンプルデータ(キャラクター23体・サンプルデッキ2件)を投入する。

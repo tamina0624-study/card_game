@@ -137,10 +137,47 @@ try {
     throw $e;
 }
 
+// ストーリー章の投入(追加機能20260707.md「ストーリー機能」)。
+// `users`/`user_sessions`/`story_plays`(ユーザーのプレイ履歴)は実データのため、
+// 上記のキャラクター/デッキ系とは異なりDELETEで全消去はしない。`story_chapters` も
+// 削除はせず、`chapter_number` の重複時は `INSERT IGNORE` でスキップする(既存の章は
+// 上書きしない)、何度実行しても安全な追記のみの処理とする。
+$storyChapters = [
+    [
+        'chapterNumber' => 1,
+        'title' => '旅立ちの町、始まりの召集',
+        'outline' => 'アルゼリオンの声に導かれ、主人公は辺境の町サレイユに召集される。' .
+            '町では魔物の気配が増しており、冒険者ギルドは新たな戦力を求めていた。' .
+            '主人公はギルドで自らのカードを示し、初めての依頼(町の周辺に現れた小型魔物の討伐)を受けることになる。',
+    ],
+    [
+        'chapterNumber' => 2,
+        'title' => '霧の森の異変',
+        'outline' => 'サレイユの北に広がる「霧の森」で旅人が消える事件が相次いでいる。' .
+            '主人公は調査のため森へ向かい、霧の奥で古い祭壇と、そこに巣食う強力な魔物と遭遇する。' .
+            '仲間との連携か単独での判断か、主人公の選択が霧の森の運命を左右する。',
+    ],
+    [
+        'chapterNumber' => 3,
+        'title' => '国境の砦、裏切りの影',
+        'outline' => '隣国との国境を守る砦から救援要請が届く。砦の内部には裏切り者がいるという噂があり、' .
+            '主人公は砦の兵士たちと協力しながら真相を探ることになる。' .
+            '最終的に姿を現す黒幕との対峙で、主人公はこれまでの戦いで培った力を試される。',
+    ],
+];
+
+$insertChapter = $pdo->prepare(
+    'INSERT IGNORE INTO story_chapters (chapter_number, title, outline) VALUES (?, ?, ?)'
+);
+foreach ($storyChapters as $chapter) {
+    $insertChapter->execute([$chapter['chapterNumber'], $chapter['title'], $chapter['outline']]);
+}
+
 json_response([
     'message' => sprintf(
-        'サンプルキャラクター%d体・サンプルデッキ%d件を投入しました。',
+        'サンプルキャラクター%d体・サンプルデッキ%d件・ストーリー章%d件(既存分はスキップ)を投入しました。',
         count($characters),
-        count($decks)
+        count($decks),
+        count($storyChapters)
     ),
 ]);
