@@ -17,6 +17,10 @@
  * POST action=recover   = パスワード問い合わせ。usernameが存在すれば平文パスワードを返す
  *                          (`schema.sql` の `users` テーブルコメントの通り、この目的のために
  *                          平文保存している)。
+ * POST action=find_id   = usernameから `id` のみを引く軽量ルックアップ。パスワードは
+ *                          一切扱わない(`recover` と異なりログインもしない)。デッキ/
+ *                          キャラクターの所有者付け直しなど、運営側の一度きりのデータ
+ *                          修正で使う想定。
  */
 
 require_once __DIR__ . '/config.php';
@@ -115,6 +119,17 @@ if ($action === 'recover') {
         json_error('そのユーザー名は登録されていません。', 404);
     }
     json_response(['username' => $row['username'], 'password' => $row['password']]);
+}
+
+if ($action === 'find_id') {
+    $username = trim((string) ($input['username'] ?? ''));
+    $stmt = $pdo->prepare('SELECT id, username FROM users WHERE username = ?');
+    $stmt->execute([$username]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        json_error('そのユーザー名は登録されていません。', 404);
+    }
+    json_response(['id' => (int) $row['id'], 'username' => $row['username']]);
 }
 
 json_error('不正なリクエストです。', 400);
