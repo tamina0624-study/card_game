@@ -48,14 +48,25 @@ export class SystemCharacterLockedError extends Error {
  * キャラクターを新規作成する。
  * `characters` へのINSERTと `character_parameters` / `special_moves` への一括INSERTは
  * PHPブリッジ側(`php/characters.php`)で単一トランザクションとして実行される。
+ *
+ * `userId`(ログイン中ユーザーのid)を指定すると `characters.user_id` に保存され、
+ * そのユーザーが作成したキャラクター(`listCharacters(ownerId)` で見える対象)になる。
+ * 未ログインの場合は呼び出し元で省略すればよい(`lib/decks/repository.ts` の
+ * `createDeck` と同じ方針)。
  */
-export async function createCharacter(input: CharacterInput): Promise<Character> {
-  return callBridge<Character>("characters.php", { method: "POST", body: input });
+export async function createCharacter(input: CharacterInput, userId?: number): Promise<Character> {
+  return callBridge<Character>("characters.php", { method: "POST", body: { ...input, userId } });
 }
 
-/** キャラクター一覧を取得する(パラメータ・必殺技を含む全情報)。 */
-export async function listCharacters(): Promise<Character[]> {
-  return callBridge<Character[]>("characters.php");
+/**
+ * キャラクター一覧を取得する(パラメータ・必殺技を含む全情報)。
+ * `ownerId` を指定すると、システムキャラクター(`isSystem`)とそのユーザー
+ * (`characters.user_id`)が作成したキャラクターのみに絞り込む(キャラクター作成・
+ * 編集画面での「システムキャラクターと自分のキャラクターのみ表示」対応)。
+ * デッキ編成のキャラクター選択など全ユーザー分が必要な場面では省略する。
+ */
+export async function listCharacters(ownerId?: number): Promise<Character[]> {
+  return callBridge<Character[]>("characters.php", ownerId !== undefined ? { query: { ownerId } } : undefined);
 }
 
 /** キャラクター詳細情報を一覧APIのサマリDTOへ変換する。 */

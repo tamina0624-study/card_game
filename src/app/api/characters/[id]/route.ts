@@ -5,6 +5,10 @@ export const runtime = "nodejs";
  * `DELETE /api/characters/:id` (削除) のRoute Handler。
  *
  * SQLite(`better-sqlite3`)を同期的に利用するため `runtime = "nodejs"` を明示する。
+ *
+ * `GET` は所有者を問わず参照可能なままとする一方、`PUT`/`DELETE`(編集・削除)は
+ * システムキャラクター(既存の403 `SYSTEM_CHARACTER_LOCKED`)を除き、ログイン中
+ * ユーザーが作成したキャラクターのみ許可する(`ensureEditableCharacterOr404`)。
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -16,6 +20,7 @@ import {
   updateCharacter,
 } from "@/lib/characters/repository";
 import { validateCharacterInput } from "@/lib/characters/validation";
+import { getCurrentUser } from "@/lib/auth/session";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -26,6 +31,25 @@ function parseCharacterId(idParam: string): number | null {
   }
   const id = Number(idParam);
   return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+/**
+ * PUT/DELETEの前に、対象がシステムキャラクターでない限り、ログイン中ユーザーが
+ * その作成者であることを確認する(システムキャラクターは既存の
+ * `SYSTEM_CHARACTER_LOCKED`(403)にそのまま処理を委ねるためここでは通す)。
+ * `src/app/decks/[id]/edit/page.tsx` 用の `ensureOwnDeckOr404` と同じ方針の
+ * IDOR対策。所有者が異なる場合は他ユーザーのキャラクターの存在有無を漏らさないよう
+ * 404として扱う。
+ */
+async function ensureEditableCharacterOr404(id: number): Promise<NextResponse | null> {
+  const [character, user] = await Promise.all([getCharacterById(id), getCurrentUser()]);
+  if (!character) {
+    return NextResponse.json({ error: "キャラクターが見つかりません。" }, { status: 404 });
+  }
+  if (!character.isSystem && (!user || character.userId !== user.id)) {
+    return NextResponse.json({ error: "キャラクターが見つかりません。" }, { status: 404 });
+  }
+  return null;
 }
 
 /** キャラクター詳細を取得する。存在しない場合は404。 */
@@ -77,6 +101,11 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     );
   }
 
+  const forbidden = await ensureEditableCharacterOr404(id);
+  if (forbidden) {
+    return forbidden;
+  }
+
   try {
     const character = await updateCharacter(id, result.data);
     if (!character) {
@@ -102,6 +131,11 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
   const id = parseCharacterId(idParam);
   if (id === null) {
     return NextResponse.json({ error: "idが不正です。" }, { status: 400 });
+  }
+
+  const forbidden = await ensureEditableCharacterOr404(id);
+  if (forbidden) {
+    return forbidden;
   }
 
   try {

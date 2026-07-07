@@ -11,8 +11,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createCharacter, listCharacters, toCharacterSummary } from "@/lib/characters/repository";
 import { validateCharacterInput } from "@/lib/characters/validation";
 import type { CharacterSummary } from "@/lib/types";
+import { getCurrentUser } from "@/lib/auth/session";
 
-/** キャラクター一覧をサマリDTOの配列で返す。 */
+/**
+ * キャラクター一覧をサマリDTOの配列で返す(所有者を問わず全件、絞り込み無し)。
+ * デッキ編成のキャラクター選択(`DeckBuilder`)で使うため、`src/app/characters/page.tsx`
+ * (自分のキャラクターのみ表示)とは異なりここではフィルタしない。
+ */
 export async function GET() {
   const characters = await listCharacters();
   const summaries: CharacterSummary[] = characters.map(toCharacterSummary);
@@ -23,6 +28,7 @@ export async function GET() {
  * キャラクターを新規作成する。
  * `validateCharacterInput` による検証(100ポイント制限含む)に失敗した場合は400、
  * 成功した場合は `createCharacter` を呼び出し201で作成物(詳細情報)を返す。
+ * ログイン中であれば、そのユーザーのidを紐付ける(`characters.user_id`)。
  */
 export async function POST(request: NextRequest) {
   let body: unknown;
@@ -46,6 +52,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const character = await createCharacter(result.data);
+  const user = await getCurrentUser();
+  const character = await createCharacter(result.data, user?.id);
   return NextResponse.json(character, { status: 201 });
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
 import { listCharacters, toCharacterSummary } from "@/lib/characters/repository";
+import { getCurrentUser } from "@/lib/auth/session";
 
 /**
  * キャラクター一覧ページ(サーバーコンポーネント)。
@@ -10,13 +11,20 @@ import { listCharacters, toCharacterSummary } from "@/lib/characters/repository"
  * fetchし直す必要はない)。DB直接呼び出しのみだとNext.jsが静的prerenderして
  * しまう(ビルド時点のデータで固定される)ため `force-dynamic` を明示する。
  *
+ * システムキャラクターと、ログイン中ユーザーが作成したキャラクターのみを表示する
+ * (`listCharacters(ownerId)`。他ユーザーが作成したキャラクターは一覧・編集画面の
+ * どちらにも出さない)。未ログインの場合は実在しないid(0)を渡し、システム
+ * キャラクターのみ表示する(`src/app/decks/page.tsx` と異なり、システム
+ * キャラクターは全ユーザー共通の資産のため未ログインでも一覧を隠さない)。
+ *
  * 背景は `.page-bg`(`src/app/page.tsx`・`src/app/decks/page.tsx` と共通、
  * `ゲーム画面イメージ/Top画面の背景イメージ.png`)。
  */
 export const dynamic = "force-dynamic";
 
 export default async function CharactersPage() {
-  const characters = (await listCharacters()).map(toCharacterSummary);
+  const user = await getCurrentUser();
+  const characters = (await listCharacters(user?.id ?? 0)).map(toCharacterSummary);
 
   return (
     <div className="page-bg">

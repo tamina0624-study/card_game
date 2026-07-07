@@ -62,4 +62,26 @@ if ((int) $columnCheck->fetchColumn() === 0) {
     );
 }
 
+// `characters.user_id`(キャラクター作成・編集画面の「システムキャラクターと自分が
+// 作ったキャラクターのみ表示」対応)の追加。上記と同じ理由で個別ALTERにしている。
+// 列追加と同時に、この時点で既に登録されている全キャラクターをシステムキャラクター
+// (`is_system = 1`)へ一括移行する(ユーザー要望「登録されているキャラクターは全部
+// システムキャラクターの領域にしてください」対応)。`UPDATE` は「列がまだ無い=
+// このブロックを初めて実行する」ときのみ走る一度きりの処理のため、今後ユーザーが
+// 新規作成するキャラクター(user_idを持つ・is_system=0)には影響しない。
+$columnCheck = $pdo->prepare(
+    "SELECT COUNT(*) FROM information_schema.columns
+     WHERE table_schema = DATABASE() AND table_name = 'characters' AND column_name = 'user_id'"
+);
+$columnCheck->execute();
+if ((int) $columnCheck->fetchColumn() === 0) {
+    $pdo->exec(
+        'ALTER TABLE characters
+         ADD COLUMN user_id INT NULL AFTER is_system,
+         ADD KEY idx_characters_user_id (user_id),
+         ADD CONSTRAINT fk_characters_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL'
+    );
+    $pdo->exec('UPDATE characters SET is_system = 1');
+}
+
 json_response(['message' => 'migrate completed', 'statements' => count($statements)]);

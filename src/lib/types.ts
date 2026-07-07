@@ -78,6 +78,13 @@ export type Character = {
    * 強化・削除を防ぐため)。
    */
   isSystem: boolean;
+  /**
+   * このキャラクターを作成した(ログイン中に作成した)ユーザーのid。システム
+   * キャラクター、または未ログインで作成された場合は `null`
+   * (`lib/decks/repository.ts` の `Deck.userId` と同じ方針、キャラクター
+   * 作成・編集画面の「システムキャラクターと自分が作ったキャラクターのみ表示」対応)。
+   */
+  userId: number | null;
   parameters: CharacterParameter[];
   specialMoves: SpecialMove[];
   createdAt: string;

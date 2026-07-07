@@ -3,10 +3,18 @@
 /**
  * キャラクターCRUDエンドポイント(`src/lib/characters/repository.ts` のPHP版)。
  *
- * GET(id無し)    = 一覧(`listCharacters`、全件の全情報を返す。サマリ変換はNext.js側で行う)
+ * GET(id無し, ownerId無し) = 一覧(`listCharacters`、全件の全情報を返す。サマリ変換はNext.js側で行う。
+ *                           デッキ編成のキャラクター選択など、全ユーザー分が必要な画面で使う)
+ * GET(id無し, ownerId=)   = システムキャラクター + 指定ユーザーが作成したキャラクターのみの一覧
+ *                           (`listCharacters(ownerId)`。キャラクター作成・編集画面はこちらを使い、
+ *                           他ユーザーが作成したキャラクターが混ざらないようにする。ログインしていない
+ *                           場合は呼び出し元が実在しないid(0)を渡すことで、システムキャラクターのみ
+ *                           になる)。並び順は自分が作成したキャラクターが先、システムキャラクターが
+ *                           後(各グループ内は id 昇順)
  * GET(id=)       = 詳細(`getCharacterById`)
  * POST           = 作成(`createCharacter`、`isSystem: true` を渡すと編集・削除不可の
- *                    システムキャラクターとして登録できる)
+ *                    システムキャラクターとして登録できる。`userId` を渡すとそのユーザーが
+ *                    作成したキャラクターとして `characters.user_id` に保存される)
  * PUT(id=)       = 更新(`updateCharacter`、対象がシステムキャラクターの場合は403
  *                    `SYSTEM_CHARACTER_LOCKED`)
  * DELETE(id=)    = 削除(`deleteCharacter`、システムキャラクターの場合は403
@@ -24,6 +32,23 @@ require_api_key();
 $method = $_SERVER['REQUEST_METHOD'];
 $id = isset($_GET['id']) ? (int) $_GET['id'] : null;
 $pdo = get_pdo();
+
+$ownerId = isset($_GET['ownerId']) ? (int) $_GET['ownerId'] : null;
+
+if ($method === 'GET' && $id === null && $ownerId !== null) {
+    // 自分が作成したキャラクター(user_id = ownerId)を先に、システムキャラクターを
+    // 後に並べる(ユーザー要望「自分が作成したキャラクターが最初に表示され、後で
+    // システムキャラクターが並ぶように」対応)。`user_id` がNULLの行は
+    // `user_id = ?` がNULL(非TRUE)になりCASEのELSEに落ちるため、明示的な
+    // IS NULL判定なしでも意図通りに分類できる。
+    $stmt = $pdo->prepare(
+        'SELECT * FROM characters WHERE is_system = 1 OR user_id = ?
+         ORDER BY CASE WHEN user_id = ? THEN 0 ELSE 1 END ASC, id ASC'
+    );
+    $stmt->execute([$ownerId, $ownerId]);
+    $rows = $stmt->fetchAll();
+    json_response(array_map(fn($row) => assemble_character($pdo, $row), $rows));
+}
 
 if ($method === 'GET' && $id === null) {
     $rows = $pdo->query('SELECT * FROM characters ORDER BY id ASC')->fetchAll();
@@ -46,11 +71,12 @@ if ($method === 'POST') {
     // システムキャラクター登録用フラグ(通常のキャラクター作成画面からは送られない、
     // 運営が直接APIを叩いて固定キャラクターを登録する際に使う)。
     $isSystem = !empty($input['isSystem']) ? 1 : 0;
+    $userId = isset($input['userId']) && $input['userId'] !== null ? (int) $input['userId'] : null;
 
     $pdo->beginTransaction();
     try {
         $stmt = $pdo->prepare(
-            'INSERT INTO characters (name, description, image_url, total_points, is_system) VALUES (?, ?, ?, ?, ?)'
+            'INSERT INTO characters (name, description, image_url, total_points, is_system, user_id) VALUES (?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $input['name'],
@@ -58,6 +84,7 @@ if ($method === 'POST') {
             $input['imageUrl'] ?? null,
             $totalPoints,
             $isSystem,
+            $userId,
         ]);
         $characterId = (int) $pdo->lastInsertId();
         replace_parameters_and_moves($pdo, $characterId, $input);
