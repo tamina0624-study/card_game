@@ -159,6 +159,8 @@ export type Deck = {
    * `lib/decks/repository.ts` の `getUserDeck` 参照)。
    */
   userId: number | null;
+  /** ストーリー章の雑魚戦・ボス戦用に登録されたデッキか(`true`の場合、通常のPvP対戦セットアップ画面の相手候補には出ない)。 */
+  isStoryEnemy: boolean;
   front: Character[];
   bench: Character[];
   createdAt: string;
@@ -213,6 +215,9 @@ export type BattleResult = {
   mvpCharacterId: number | null;
 };
 
+/** バトルが章内の雑魚戦・ボス戦として実行された場合の付随情報(通常のPvP対戦は`null`)。 */
+export type BattleStoryPhase = "mob" | "boss";
+
 /** バトル一覧APIのレスポンスDTO(概要情報のみ)。 */
 export type BattleSummary = {
   id: number;
@@ -223,6 +228,10 @@ export type BattleSummary = {
   mvpName: string | null;
   createdAt: string;
   completedAt: string | null;
+  /** この対戦が紐付くストーリー章のid。通常のPvP対戦は`null`。 */
+  storyChapterId: number | null;
+  /** `storyChapterId`が非`null`の場合の、章内でのフェーズ(雑魚戦/ボス戦)。 */
+  storyPhase: BattleStoryPhase | null;
 };
 
 /**
@@ -241,6 +250,10 @@ export type BattleDetail = {
   errorMessage: string | null;
   createdAt: string;
   completedAt: string | null;
+  /** この対戦が紐付くストーリー章のid。通常のPvP対戦は`null`。 */
+  storyChapterId: number | null;
+  /** `storyChapterId`が非`null`の場合の、章内でのフェーズ(雑魚戦/ボス戦)。 */
+  storyPhase: BattleStoryPhase | null;
 };
 
 // --- ユーザー(追加機能20260707.md「ユーザー登録機能」) --------------------
@@ -268,6 +281,12 @@ export type RegisteredUser = {
  * ストーリー章の一覧・詳細表示用DTO。`outline` は開発者が投入する固定の大枠(あらすじ)、
  * `playedAt` はログイン中ユーザーがこの章をプレイ済みの場合のみ日時が入る
  * (未ログイン・未プレイの場合は `null`)。
+ *
+ * `locked` は追加機能20260708.md「ストーリーモードに戦闘を組み込みたい」対応の
+ * 章ロック判定(前章クリア済みかどうか)。先頭の章は常に`false`、2章目以降は
+ * 直前の章の`story_plays.cleared_at`が非`null`(=クリア済み)でなければ`true`になる。
+ * 未ログインの場合はすべて`true`。フロント側は`locked`な章のタイトル・あらすじ・本文を
+ * 表示してはならない(`php/stories.php`の`compute_locked_map`参照)。
  */
 export type StoryChapterSummary = {
   id: number;
@@ -276,6 +295,13 @@ export type StoryChapterSummary = {
   outline: string;
   publishedAt: string;
   playedAt: string | null;
+  /** この章のマスコットキャラクターのid。未設定の章は`null`。 */
+  mascotCharacterId: number | null;
+  /** 雑魚戦の対戦相手デッキid。未設定(雑魚戦なし)の章は`null`。 */
+  mobDeckId: number | null;
+  /** ボス戦の対戦相手デッキid。未設定(ボス戦なし、クリア条件は「物語を読む」のみ)の章は`null`。 */
+  bossDeckId: number | null;
+  locked: boolean;
 };
 
 /** ユーザーがAIに個別編集させた、その章の物語本文(一度生成されたら以後は同じ内容)。 */
@@ -283,6 +309,8 @@ export type StoryPlay = {
   chapterId: number;
   content: string;
   createdAt: string;
+  /** この章をクリアした日時。ボス戦が無い章はプレイと同時に確定、ボス戦がある章はボス戦勝利時に確定する(未クリアは`null`)。 */
+  clearedAt: string | null;
 };
 
 /** ストーリー章詳細(`play` はログイン中ユーザーがまだプレイしていない場合 `null`)。 */
@@ -294,4 +322,11 @@ export type StoryChapterDetail = StoryChapterSummary & {
 export type StoryHistoryEntry = StoryPlay & {
   chapterNumber: number;
   chapterTitle: string;
+};
+
+/** 章内の雑魚戦・ボス戦への挑戦回数(マスコットキャラクターの「祝福」の度合い)。 */
+export type StoryBlessing = {
+  chapterId: number;
+  /** 勝敗を問わずこれまでに挑戦した回数。`lib/stories/blessing.ts`の`blessingMultiplier`で倍率に変換する。 */
+  battleCount: number;
 };

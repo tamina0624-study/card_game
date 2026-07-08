@@ -2209,6 +2209,14 @@ select:focus {
   line-height: 1.6;
 }
 
+/* ロック中の章カード(追加機能20260708.md「ストーリーモードに戦闘を組み込みたい」対応)。
+   `<Link>`ではなく`<div>`で描画するためクリック不可を示すグレーアウト表示にする。 */
+.story-card--locked {
+  border-left-color: var(--border);
+  opacity: 0.55;
+  cursor: default;
+}
+
 .story-history-list {
   display: flex;
   flex-direction: column;
@@ -2273,4 +2281,23 @@ select:focus {
   flex-direction: column;
   gap: 0.9rem;
   line-height: 1.9;
+}
+
+.story-detail__mascot-body {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.story-detail__mascot-thumb {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.story-detail__mascot-name {
+  font-weight: 600;
+  color: var(--gold-bright);
 }

@@ -43,6 +43,34 @@ import type { Character, Deck } from "@/lib/types";
  */
 export type DeckDetail = Deck;
 
+/**
+ * `buildBattlePrompt`の任意オプション(章内の雑魚戦・ボス戦でのみ使う、
+ * 追加機能20260708.md「戦闘は勝たなくても、回数を重ねると強くなるようにする」対応)。
+ */
+export type BattlePromptOptions = {
+  /**
+   * マスコットキャラクターの祝福倍率(`lib/stories/blessing.ts`の`blessingMultiplier`)。
+   * 指定するとチームA(章内の雑魚戦・ボス戦では常に呼び出し元のユーザー自身のデッキ)の
+   * パラメータ値だけに乗算してから整形する。あくまでこのプロンプト文字列の中だけの
+   * 一時的な演出であり、`character_parameters`テーブルへは一切書き戻さない
+   * (通常のPvP対戦やキャラクターシート表示には影響しない)。
+   */
+  blessingMultiplier?: number;
+  /** 祝福を与えているマスコットキャラクターの名前。`blessingMultiplier`と併せて指定するとプロンプト内で言及する。 */
+  mascotName?: string;
+};
+
+/** キャラクターのパラメータ値に倍率を掛けた表示用コピーを作る(整数に丸める、DBへは書き戻さない)。 */
+function applyParameterMultiplier(character: Character, multiplier: number): Character {
+  return {
+    ...character,
+    parameters: character.parameters.map((parameter) => ({
+      ...parameter,
+      value: Math.round(parameter.value * multiplier),
+    })),
+  };
+}
+
 /** キャラクター1体分のパラメータを「名前:値」の列挙として整形する。 */
 function formatParameters(character: Character): string {
   if (character.parameters.length === 0) {
@@ -100,14 +128,38 @@ function formatDeckSection(deck: DeckDetail, teamLabel: string): string {
  * この文字列はそのまま `callBattleJudge`(`lib/claude/client.ts`)の
  * `userMessage` 引数として使用できる形になっている。
  */
-export function buildBattlePrompt(deckA: DeckDetail, deckB: DeckDetail): string {
+export function buildBattlePrompt(
+  deckA: DeckDetail,
+  deckB: DeckDetail,
+  options: BattlePromptOptions = {}
+): string {
+  const { blessingMultiplier, mascotName } = options;
+  const isBlessed = blessingMultiplier !== undefined && blessingMultiplier !== 1;
+  const boostedDeckA: DeckDetail = isBlessed
+    ? {
+        ...deckA,
+        front: deckA.front.map((character) => applyParameterMultiplier(character, blessingMultiplier)),
+        bench: deckA.bench.map((character) => applyParameterMultiplier(character, blessingMultiplier)),
+      }
+    : deckA;
+
   const sections: string[] = [];
 
   sections.push(
     "これから2つのチームによるバトルを実況・審判してもらいます。以下の情報をもとに戦闘を進行してください。"
   );
 
-  sections.push("---\n" + formatDeckSection(deckA, "チームA"));
+  if (isBlessed) {
+    const percent = Math.round((blessingMultiplier - 1) * 100);
+    sections.push(
+      "---\n" +
+        `【マスコットの祝福】チームAは${
+          mascotName ? `マスコット「${mascotName}」` : "マスコットキャラクター"
+        }の祝福を受けている。以下のチームA欄のパラメータ値には既に+${percent}%の補正が反映済みであり(パラメータ名・意味・必殺技の説明そのものは変わらない)、戦況分析・実況ではこの強化状態を踏まえて判定すること。`
+    );
+  }
+
+  sections.push("---\n" + formatDeckSection(boostedDeckA, "チームA"));
   sections.push("---\n" + formatDeckSection(deckB, "チームB"));
 
   sections.push(

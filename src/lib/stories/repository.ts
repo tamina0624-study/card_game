@@ -8,7 +8,13 @@
  */
 
 import { BridgeError, callBridge } from "@/lib/bridge/client";
-import type { StoryChapterDetail, StoryChapterSummary, StoryHistoryEntry, StoryPlay } from "@/lib/types";
+import type {
+  StoryBlessing,
+  StoryChapterDetail,
+  StoryChapterSummary,
+  StoryHistoryEntry,
+  StoryPlay,
+} from "@/lib/types";
 
 /** 公開済みストーリー章の一覧を取得する。`userId`指定時は各章の`playedAt`が埋まる。 */
 export async function listStoryChapters(userId?: number): Promise<StoryChapterSummary[]> {
@@ -45,5 +51,32 @@ export async function saveStoryPlay(
   return callBridge<StoryPlay>("stories.php", {
     method: "POST",
     body: { action: "save-play", userId, chapterId, content, rawAiResponse },
+  });
+}
+
+/**
+ * ボス戦勝利時に章をクリア扱いにする(`story_plays.cleared_at`を確定させる)。
+ * 既にクリア済みの場合は何もせず現在の状態を返す(冪等)。呼び出し元は
+ * `src/app/api/stories/[id]/battle/route.ts`(ボス戦勝利時のみ呼び出す)。
+ */
+export async function markChapterCleared(userId: number, chapterId: number): Promise<StoryPlay> {
+  return callBridge<StoryPlay>("stories.php", {
+    method: "POST",
+    body: { action: "mark-cleared", userId, chapterId },
+  });
+}
+
+/** 章内の雑魚戦・ボス戦への現在の挑戦回数(祝福度)を取得する。まだ1回も挑戦していなければ`battleCount: 0`。 */
+export async function getStoryBlessing(userId: number, chapterId: number): Promise<StoryBlessing> {
+  return callBridge<StoryBlessing>("stories.php", {
+    query: { action: "get-blessing", userId, chapterId },
+  });
+}
+
+/** 章内の雑魚戦・ボス戦に1回挑戦したことを記録する(勝敗問わず呼び出す)。更新後の挑戦回数を返す。 */
+export async function incrementStoryBlessing(userId: number, chapterId: number): Promise<StoryBlessing> {
+  return callBridge<StoryBlessing>("stories.php", {
+    method: "POST",
+    body: { action: "increment-blessing", userId, chapterId },
   });
 }

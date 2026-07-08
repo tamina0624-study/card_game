@@ -3,7 +3,9 @@ export const runtime = "nodejs";
 /**
  * `POST /api/stories/:id/play` (ストーリーを進める)のRoute Handler。
  *
- * ログインが必要(未ログインは401)。既にAI生成済みの本文がある場合は
+ * ログインが必要(未ログインは401)。前の章をクリアしていない章(`chapter.locked`)は
+ * 403(`code: "CHAPTER_LOCKED"`)を返す(URL直打ちでの先読み防止、`compute_locked_map`参照)。
+ * 既にAI生成済みの本文がある場合は
  * そのまま返す(冪等、振り返り時に内容が変わらないようにするため再生成はしない)。
  * 未生成の場合のみ、ログインユーザーの専用デッキ(`lib/decks/repository.ts` の
  * `getUserDeck`)を取得し(無ければ400、`/decks/new`で先に作成してもらう)、
@@ -47,6 +49,13 @@ export async function POST(_request: NextRequest, context: RouteContext) {
   const chapter = await getStoryChapter(id, user.id);
   if (!chapter) {
     return NextResponse.json({ error: "ストーリーが見つかりません。" }, { status: 404 });
+  }
+
+  if (chapter.locked) {
+    return NextResponse.json(
+      { error: "前の章をクリアすると進められます。", code: "CHAPTER_LOCKED" },
+      { status: 403 }
+    );
   }
 
   if (chapter.play) {

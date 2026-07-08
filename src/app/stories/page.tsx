@@ -10,6 +10,15 @@ import { listStoryChapters, listStoryHistory } from "@/lib/stories/repository";
  * 各章の `playedAt` に応じて「プレイ済み」バッジを出し分ける。
  * ログイン中はさらに `listStoryHistory` でプレイ済みの章だけを集めた
  * 「振り返り」セクションも表示する(追加機能20260707.md「振り返りが出来るようにする」)。
+ *
+ * `chapter.locked`(追加機能20260708.md「ストーリーモードに戦闘を組み込みたい」対応、
+ * 前章クリア判定)な章はタイトル・あらすじを一切表示せず、クリック不可の非活性カードに
+ * する(URLを推測されても`/stories/[id]`側でも同様にロックするため二重の防御になる)。
+ * ただし未ログインの場合はPHP側が全章を`locked: true`として返す(ユーザーごとの
+ * 進行状況が無いため)仕様上、この判定をそのまま使うと従来できていた「ログイン前でも
+ * あらすじだけは読める」プレビューができなくなってしまう。そのため実際のロック表示は
+ * `Boolean(user) && chapter.locked` で行い、未ログイン時は従来通り全章のあらすじを
+ * 表示したままログインを促す(実際のプレイ・戦闘操作はいずれもAPI側で401になる)。
  */
 export const dynamic = "force-dynamic";
 
@@ -54,16 +63,30 @@ export default async function StoriesPage() {
           <p style={{ color: "var(--muted)" }}>まだ公開されているストーリーがありません。</p>
         ) : (
           <div className="story-list">
-            {chapters.map((chapter) => (
-              <Link key={chapter.id} href={`/stories/${chapter.id}`} className="card story-card">
-                <div className="story-card__header">
-                  <span className="story-card__number">第{chapter.chapterNumber}章</span>
-                  {chapter.playedAt && <span className="badge badge--win">プレイ済み</span>}
+            {chapters.map((chapter) =>
+              Boolean(user) && chapter.locked ? (
+                <div
+                  key={chapter.id}
+                  className="card story-card story-card--locked"
+                  aria-disabled="true"
+                >
+                  <div className="story-card__header">
+                    <span className="story-card__number">第{chapter.chapterNumber}章</span>
+                    <span className="badge">🔒 未解放</span>
+                  </div>
+                  <p className="story-card__outline">前の章をクリアすると解放されます。</p>
                 </div>
-                <h2 className="story-card__title">{chapter.title}</h2>
-                <p className="story-card__outline">{chapter.outline}</p>
-              </Link>
-            ))}
+              ) : (
+                <Link key={chapter.id} href={`/stories/${chapter.id}`} className="card story-card">
+                  <div className="story-card__header">
+                    <span className="story-card__number">第{chapter.chapterNumber}章</span>
+                    {chapter.playedAt && <span className="badge badge--win">プレイ済み</span>}
+                  </div>
+                  <h2 className="story-card__title">{chapter.title}</h2>
+                  <p className="story-card__outline">{chapter.outline}</p>
+                </Link>
+              )
+            )}
           </div>
         )}
 

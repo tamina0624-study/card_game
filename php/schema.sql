@@ -167,3 +167,21 @@ CREATE TABLE IF NOT EXISTS story_plays (
   CONSTRAINT fk_story_plays_chapter
     FOREIGN KEY (story_chapter_id) REFERENCES story_chapters(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 章内の雑魚戦・ボス戦(追加機能20260708.md「ストーリーモードに戦闘を組み込みたい」)を
+-- 何回挑んだか(勝敗問わず)のユーザー別カウンター。マスコットキャラクターの「祝福」の
+-- 度合いとして、挑戦回数が多いほどその章のバトル判定プロンプト内でのみパラメータに
+-- 倍率をかける(`src/lib/stories/blessing.ts`)。`character_parameters`自体は書き換えない。
+CREATE TABLE IF NOT EXISTS story_blessings (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  user_id INT NOT NULL,
+  story_chapter_id INT NOT NULL,
+  battle_count INT NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_story_blessings_user_chapter (user_id, story_chapter_id),
+  KEY idx_story_blessings_user_id (user_id),
+  CONSTRAINT fk_story_blessings_user
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_story_blessings_chapter
+    FOREIGN KEY (story_chapter_id) REFERENCES story_chapters(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

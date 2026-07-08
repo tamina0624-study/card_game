@@ -3,16 +3,23 @@
 /**
  * デッキCRUDエンドポイント(`src/lib/decks/repository.ts` のPHP版)。
  *
- * GET(id無し, userId無し, ownerId無し) = 一覧(`listDecks`、概要DTOのみ、全ユーザー分)
+ * GET(id無し, userId無し, ownerId無し) = 一覧(`listDecks`、概要DTOのみ、全ユーザー分。
+ *                           `is_story_enemy = 1`のデッキ(ストーリー章の雑魚/ボスデッキ)は
+ *                           通常のPvP対戦セットアップ画面の相手候補に出さないため除外する)
  * GET(id無し, userId=)    = そのユーザーの専用デッキ(`getUserDeck`、最も新しく作成した
  *                           1件をfront/bench全情報付きで返す。無ければ404)
  * GET(id無し, ownerId=)   = 指定ユーザーが作成したデッキの一覧(`listDecks(ownerId)`、
  *                           概要DTOのみ。デッキ作成・編集画面の一覧はこちらを使い、
  *                           他ユーザーのデッキが混ざらないようにする)
- * GET(id=)               = 詳細(`getDeckById`、front/bench各4体のキャラクター全情報を含む)
+ * GET(id=)               = 詳細(`getDeckById`、front/bench各4体のキャラクター全情報を含む。
+ *                           ストーリー章の雑魚戦・ボス戦実行時はidを直接指定して取得するため
+ *                           `is_story_enemy`による除外はここでは行わない)
  * POST                   = 作成(`createDeck`、characterId不在時は400 `CHARACTER_NOT_FOUND`。
  *                           `userId`(ログイン中ユーザーのid)が指定されていれば
- *                           `decks.user_id` に保存し、そのユーザーの専用デッキとする)
+ *                           `decks.user_id` に保存し、そのユーザーの専用デッキとする。
+ *                           `isStoryEnemy`を指定すると`is_story_enemy`に保存する
+ *                           (章の雑魚/ボスデッキ用。`stories.php` action=create-chapterで
+ *                           紐付けた時点でも自動的に立つため必須ではない)
  * PUT(id=)               = 更新(`updateDeck`。`user_id`は作成時のまま変更しない)
  * DELETE(id=)            = 削除(`deleteDeck`、使用中の場合は409 `DECK_IN_USE`)
  */
@@ -101,6 +108,7 @@ function find_deck_by_id(PDO $pdo, int $id): ?array
         'name' => $row['name'],
         'ownerName' => $row['owner_name'],
         'userId' => $row['user_id'] !== null ? (int) $row['user_id'] : null,
+        'isStoryEnemy' => (bool) $row['is_story_enemy'],
         'front' => $front,
         'bench' => $bench,
         'createdAt' => $row['created_at'],
@@ -112,7 +120,12 @@ $userId = isset($_GET['userId']) ? (int) $_GET['userId'] : null;
 $ownerId = isset($_GET['ownerId']) ? (int) $_GET['ownerId'] : null;
 
 if ($method === 'GET' && $id === null && $userId !== null) {
-    $stmt = $pdo->prepare('SELECT id FROM decks WHERE user_id = ? ORDER BY id DESC LIMIT 1');
+    // `is_story_enemy = 0` を必須にし、万一ストーリーの雑魚/ボスデッキが
+    // (本来unownedであるべきところ)誤ってユーザーに紐付けられていても、
+    // そのユーザーの「専用デッキ」として誤って扱われないようにする。
+    $stmt = $pdo->prepare(
+        'SELECT id FROM decks WHERE user_id = ? AND is_story_enemy = 0 ORDER BY id DESC LIMIT 1'
+    );
     $stmt->execute([$userId]);
     $row = $stmt->fetch();
     if (!$row) {
@@ -123,7 +136,8 @@ if ($method === 'GET' && $id === null && $userId !== null) {
 
 if ($method === 'GET' && $id === null && $ownerId !== null) {
     $stmt = $pdo->prepare(
-        'SELECT id, name, owner_name, created_at FROM decks WHERE user_id = ? ORDER BY id ASC'
+        'SELECT id, name, owner_name, created_at FROM decks
+         WHERE user_id = ? AND is_story_enemy = 0 ORDER BY id ASC'
     );
     $stmt->execute([$ownerId]);
     $rows = $stmt->fetchAll();
@@ -136,7 +150,9 @@ if ($method === 'GET' && $id === null && $ownerId !== null) {
 }
 
 if ($method === 'GET' && $id === null) {
-    $rows = $pdo->query('SELECT id, name, owner_name, created_at FROM decks ORDER BY id ASC')->fetchAll();
+    $rows = $pdo->query(
+        'SELECT id, name, owner_name, created_at FROM decks WHERE is_story_enemy = 0 ORDER BY id ASC'
+    )->fetchAll();
     json_response(array_map(fn($row) => [
         'id' => (int) $row['id'],
         'name' => $row['name'],
@@ -160,12 +176,14 @@ if ($method === 'POST') {
 
     $pdo->beginTransaction();
     try {
-        $pdo->prepare('INSERT INTO decks (name, owner_name, user_id) VALUES (?, ?, ?)')
-            ->execute([
-                $input['name'],
-                $input['ownerName'] ?? null,
-                isset($input['userId']) && $input['userId'] !== null ? (int) $input['userId'] : null,
-            ]);
+        $pdo->prepare(
+            'INSERT INTO decks (name, owner_name, user_id, is_story_enemy) VALUES (?, ?, ?, ?)'
+        )->execute([
+            $input['name'],
+            $input['ownerName'] ?? null,
+            isset($input['userId']) && $input['userId'] !== null ? (int) $input['userId'] : null,
+            !empty($input['isStoryEnemy']) ? 1 : 0,
+        ]);
         $deckId = (int) $pdo->lastInsertId();
         insert_deck_cards($pdo, $deckId, $input['cards']);
         $pdo->commit();
