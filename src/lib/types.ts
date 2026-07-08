@@ -215,9 +215,6 @@ export type BattleResult = {
   mvpCharacterId: number | null;
 };
 
-/** バトルが章内の雑魚戦・ボス戦として実行された場合の付随情報(通常のPvP対戦は`null`)。 */
-export type BattleStoryPhase = "mob" | "boss";
-
 /** バトル一覧APIのレスポンスDTO(概要情報のみ)。 */
 export type BattleSummary = {
   id: number;
@@ -228,10 +225,8 @@ export type BattleSummary = {
   mvpName: string | null;
   createdAt: string;
   completedAt: string | null;
-  /** この対戦が紐付くストーリー章のid。通常のPvP対戦は`null`。 */
-  storyChapterId: number | null;
-  /** `storyChapterId`が非`null`の場合の、章内でのフェーズ(雑魚戦/ボス戦)。 */
-  storyPhase: BattleStoryPhase | null;
+  /** この対戦が紐付くストーリー章内の戦闘ビート(`story_beats.id`)。通常のPvP対戦は`null`。 */
+  storyBeatId: number | null;
 };
 
 /**
@@ -250,10 +245,8 @@ export type BattleDetail = {
   errorMessage: string | null;
   createdAt: string;
   completedAt: string | null;
-  /** この対戦が紐付くストーリー章のid。通常のPvP対戦は`null`。 */
-  storyChapterId: number | null;
-  /** `storyChapterId`が非`null`の場合の、章内でのフェーズ(雑魚戦/ボス戦)。 */
-  storyPhase: BattleStoryPhase | null;
+  /** この対戦が紐付くストーリー章内の戦闘ビート(`story_beats.id`)。通常のPvP対戦は`null`。 */
+  storyBeatId: number | null;
 };
 
 // --- ユーザー(追加機能20260707.md「ユーザー登録機能」) --------------------
@@ -275,18 +268,18 @@ export type RegisteredUser = {
   password: string;
 };
 
-// --- ストーリー(追加機能20260707.md「ストーリー機能」) ---------------------
+// --- ストーリー(追加機能20260707.md「ストーリー機能」、追加機能「章に複数のストーリー・
+// 戦闘イベントを登録できるようにする」で章内をビート単位に再設計) -----------------------
 
 /**
- * ストーリー章の一覧・詳細表示用DTO。`outline` は開発者が投入する固定の大枠(あらすじ)、
- * `playedAt` はログイン中ユーザーがこの章をプレイ済みの場合のみ日時が入る
- * (未ログイン・未プレイの場合は `null`)。
+ * ストーリー章の一覧・詳細表示用DTO。`outline` は開発者が投入する章全体の短いあらすじ、
+ * `playedAt` はログイン中ユーザーがこの章のいずれかのビートに初めて着手した日時
+ * (未ログイン・未着手の場合は `null`)。
  *
- * `locked` は追加機能20260708.md「ストーリーモードに戦闘を組み込みたい」対応の
- * 章ロック判定(前章クリア済みかどうか)。先頭の章は常に`false`、2章目以降は
- * 直前の章の`story_plays.cleared_at`が非`null`(=クリア済み)でなければ`true`になる。
- * 未ログインの場合はすべて`true`。フロント側は`locked`な章のタイトル・あらすじ・本文を
- * 表示してはならない(`php/stories.php`の`compute_locked_map`参照)。
+ * `locked` は前章ロック判定(前章の最後のビートをクリア済みかどうか)。先頭の章は常に
+ * `false`、2章目以降は直前の章の最後のビートが完了済みでなければ`true`になる。
+ * 未ログインの場合はすべて`true`。フロント側は`locked`な章のタイトル・あらすじを
+ * 表示してはならない(`php/lib/stories.php`の`compute_chapter_locked_map`参照)。
  */
 export type StoryChapterSummary = {
   id: number;
@@ -297,34 +290,66 @@ export type StoryChapterSummary = {
   playedAt: string | null;
   /** この章のマスコットキャラクターのid。未設定の章は`null`。 */
   mascotCharacterId: number | null;
-  /** 雑魚戦の対戦相手デッキid。未設定(雑魚戦なし)の章は`null`。 */
-  mobDeckId: number | null;
-  /** ボス戦の対戦相手デッキid。未設定(ボス戦なし、クリア条件は「物語を読む」のみ)の章は`null`。 */
-  bossDeckId: number | null;
   locked: boolean;
 };
 
-/** ユーザーがAIに個別編集させた、その章の物語本文(一度生成されたら以後は同じ内容)。 */
-export type StoryPlay = {
+/** ビートの種別。`story`はAIが個別化する物語本文、`battle`は対戦相手デッキとの戦闘。 */
+export type StoryBeatType = "story" | "battle";
+
+/**
+ * 章内に順序付きで並ぶ「ストーリー」「戦闘イベント」の1件(`story_beats`+ログイン中
+ * ユーザーの進捗`story_beat_progress`を合成したもの)。
+ *
+ * `beatType==="story"`: `outline`(あらすじ、AI個別化の元ネタ)を持ち、`content`は
+ * 生成済みの個別化本文(未生成は`null`)。生成と同時に完了扱いになる。
+ * `beatType==="battle"`: `deckId`(対戦相手デッキ、管理者未設定の間は`null`=準備中)を持ち、
+ * `content`は常に`null`。勝利した時点で`clearedAt`が確定する。
+ *
+ * `locked`はビート単位の順送りロック(直前のビートが完了するまで`true`、
+ * 章自体がロックされている場合は先頭のビートも`true`)。ロック中のビートの
+ * `outline`/`content`をフロント側で表示してはならない。
+ */
+export type StoryBeat = {
+  id: number;
   chapterId: number;
-  content: string;
-  createdAt: string;
-  /** この章をクリアした日時。ボス戦が無い章はプレイと同時に確定、ボス戦がある章はボス戦勝利時に確定する(未クリアは`null`)。 */
+  sortOrder: number;
+  beatType: StoryBeatType;
+  title: string;
+  outline: string | null;
+  deckId: number | null;
+  locked: boolean;
+  content: string | null;
+  createdAt: string | null;
   clearedAt: string | null;
 };
 
-/** ストーリー章詳細(`play` はログイン中ユーザーがまだプレイしていない場合 `null`)。 */
+/** ストーリー章詳細(`beats`は章内のビートを`sortOrder`昇順で並べたもの)。 */
 export type StoryChapterDetail = StoryChapterSummary & {
-  play: StoryPlay | null;
+  beats: StoryBeat[];
+};
+
+/**
+ * ビート単体+その親章の文脈(`GET action=get-beat`)。`chapterNumber`/`mascotCharacterId`は
+ * `/api/stories/beats/:beatId/play`・`/battle` のRoute Handlerが、章詳細を再取得せずに
+ * ロック判定・マスコット名の解決を行えるようにするための付随情報。
+ */
+export type StoryBeatContext = StoryBeat & {
+  chapterNumber: number;
+  mascotCharacterId: number | null;
 };
 
 /** 振り返り一覧(`GET /api/stories/history`)1件分。 */
-export type StoryHistoryEntry = StoryPlay & {
+export type StoryHistoryEntry = {
+  chapterId: number;
   chapterNumber: number;
   chapterTitle: string;
+  /** その章のいずれかのビートに初めて着手した日時。 */
+  startedAt: string;
+  /** その章の最後のビートを完了した日時(未クリアは`null`)。 */
+  clearedAt: string | null;
 };
 
-/** 章内の雑魚戦・ボス戦への挑戦回数(マスコットキャラクターの「祝福」の度合い)。 */
+/** 章内の戦闘への挑戦回数(マスコットキャラクターの「祝福」の度合い)。 */
 export type StoryBlessing = {
   chapterId: number;
   /** 勝敗を問わずこれまでに挑戦した回数。`lib/stories/blessing.ts`の`blessingMultiplier`で倍率に変換する。 */

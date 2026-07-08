@@ -3,7 +3,7 @@
 /**
  * 「物語を始める」ボタン(クライアントコンポーネント)。
  *
- * `POST /api/stories/:id/play` を呼び出し、成功したら `router.refresh()` で
+ * `POST /api/stories/beats/:beatId/play` を呼び出し、成功したら `router.refresh()` で
  * ページ(サーバーコンポーネント)を再描画して生成済みの本文を表示する
  * (`LogoutButton` と同じ「実行後にrefreshで再取得する」方針)。
  */
@@ -11,7 +11,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function StoryPlayButton({ chapterId }: { chapterId: number }) {
+export default function StoryPlayButton({ beatId }: { beatId: number }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export default function StoryPlayButton({ chapterId }: { chapterId: number }) {
     setError(null);
     setLoading(true);
     try {
-      const response = await fetch(`/api/stories/${chapterId}/play`, { method: "POST" });
+      const response = await fetch(`/api/stories/beats/${beatId}/play`, { method: "POST" });
       const data: unknown = await response.json().catch(() => null);
 
       if (!response.ok) {

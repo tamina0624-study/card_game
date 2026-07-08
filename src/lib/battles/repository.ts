@@ -23,22 +23,23 @@
 import { BridgeError, callBridge } from "@/lib/bridge/client";
 import { getDeckById } from "@/lib/decks/repository";
 import type { BattleAIResponse } from "@/lib/battles/responseSchema";
-import type { BattleDetail, BattleStoryPhase, BattleSummary } from "@/lib/types";
+import type { BattleDetail, BattleSummary } from "@/lib/types";
 
 /**
  * 新規バトルを `status='pending'` で作成し、そのidを返す。
  * `deckAId`/`deckBId` が `decks` テーブルに実在することは呼び出し元
  * (API Route Handler)で事前に検証済みであることを前提とする。
  *
- * `story`(章内の雑魚戦・ボス戦として実行する場合のみ指定、`src/app/api/stories/[id]/battle/route.ts`
- * 参照)を渡すと、`battles.story_chapter_id`/`story_phase` に記録され、
- * ストーリー章詳細ページの「これまでの挑戦」履歴(`listStoryBattles`)や
- * 次章のロック解除判定(ボス戦勝利時のみ)に使われる。通常のPvP対戦は省略する。
+ * `storyBeatId`(章内の戦闘ビートとして実行する場合のみ指定、
+ * `src/app/api/stories/beats/[beatId]/battle/route.ts` 参照)を渡すと、
+ * `battles.story_beat_id` に記録され、そのビートの「これまでの挑戦」履歴
+ * (`listStoryBattles`)や次のビート・次章のロック解除判定(勝利時)に使われる。
+ * 通常のPvP対戦は省略する。
  */
 export async function createPendingBattle(
   deckAId: number,
   deckBId: number,
-  story?: { chapterId: number; phase: BattleStoryPhase }
+  storyBeatId?: number
 ): Promise<number> {
   const result = await callBridge<{ id: number }>("battles.php", {
     method: "POST",
@@ -46,20 +47,19 @@ export async function createPendingBattle(
       action: "create-pending",
       deckAId,
       deckBId,
-      storyChapterId: story?.chapterId,
-      storyPhase: story?.phase,
+      storyBeatId,
     },
   });
   return result.id;
 }
 
 /**
- * 指定ユーザーが特定の章で行った雑魚戦・ボス戦の履歴一覧を取得する
- * (ストーリー章詳細ページの「これまでの挑戦」用)。概要DTOのみ。
+ * 指定ユーザーが特定の戦闘ビートで行った挑戦の履歴一覧を取得する
+ * (ストーリー章詳細ページの、各戦闘ビートの「これまでの挑戦」用)。概要DTOのみ。
  */
-export async function listStoryBattles(userId: number, chapterId: number): Promise<BattleSummary[]> {
+export async function listStoryBattles(userId: number, beatId: number): Promise<BattleSummary[]> {
   return callBridge<BattleSummary[]>("battles.php", {
-    query: { storyChapterId: chapterId, userId },
+    query: { storyBeatId: beatId, userId },
   });
 }
 

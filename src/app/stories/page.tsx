@@ -99,7 +99,7 @@ export default async function StoriesPage() {
                   <Link href={`/stories/${entry.chapterId}`}>
                     第{entry.chapterNumber}章 {entry.chapterTitle}
                   </Link>
-                  <span className="story-history-list__date">{formatDateTime(entry.createdAt)}</span>
+                  <span className="story-history-list__date">{formatDateTime(entry.startedAt)}</span>
                 </li>
               ))}
             </ul>

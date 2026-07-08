@@ -185,3 +185,47 @@ CREATE TABLE IF NOT EXISTS story_blessings (
   CONSTRAINT fk_story_blessings_chapter
     FOREIGN KEY (story_chapter_id) REFERENCES story_chapters(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 章内に登録する「ストーリー」「戦闘イベント」を任意の数・順序で並べるためのビート
+-- (追加機能: 1章に複数のストーリー・戦闘イベントを登録できるようにする)。
+-- `beat_type='story'` は `outline`(あらすじ、`lib/stories/generate.ts`がAI個別化する元ネタ)を、
+-- `beat_type='battle'` は `deck_id`(対戦相手デッキ)を使う。管理者は
+-- `stories.php` の `action=create-chapter`(章作成時にまとめて登録)・`action=add-beat`
+-- (追加)・`action=update-beat`(deck_id等の後付け)で登録する。
+CREATE TABLE IF NOT EXISTS story_beats (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  story_chapter_id INT NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  beat_type ENUM('story', 'battle') NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  outline TEXT,
+  deck_id INT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_story_beats_chapter_id (story_chapter_id),
+  KEY idx_story_beats_deck_id (deck_id),
+  CONSTRAINT fk_story_beats_chapter
+    FOREIGN KEY (story_chapter_id) REFERENCES story_chapters(id) ON DELETE CASCADE,
+  CONSTRAINT fk_story_beats_deck
+    FOREIGN KEY (deck_id) REFERENCES decks(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ユーザーごとのビート進捗(`story_plays`を置き換える、ビート単位版)。
+-- `beat_type='story'`: `content`にAI個別化済み本文を保存し、生成と同時に`cleared_at`を確定する。
+-- `beat_type='battle'`: `content`は常にNULLのまま、そのビートの戦闘に勝利した時点で
+-- `cleared_at`を確定する(`stories.php`の`action=mark-beat-cleared`)。
+-- 章内の次のビートは「直前のビートが`cleared_at`非NULLかどうか」で順送りにロック解除される。
+CREATE TABLE IF NOT EXISTS story_beat_progress (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  user_id INT NOT NULL,
+  story_beat_id INT NOT NULL,
+  content LONGTEXT,
+  raw_ai_response LONGTEXT,
+  cleared_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_story_beat_progress_user_beat (user_id, story_beat_id),
+  KEY idx_story_beat_progress_user_id (user_id),
+  CONSTRAINT fk_story_beat_progress_user
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_story_beat_progress_beat
+    FOREIGN KEY (story_beat_id) REFERENCES story_beats(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -164,4 +164,51 @@ if ((int) $columnCheck->fetchColumn() === 0) {
     );
 }
 
+// 章内に複数の「ストーリー」「戦闘イベント」を任意の順序で登録できるようにする再設計対応。
+// `story_chapters.mob_deck_id`/`boss_deck_id`(章につき雑魚戦1つ・ボス戦1つ限定だった旧仕様)を廃止し、
+// 対戦相手デッキは新設の `story_beats.deck_id`(章内の戦闘ビートごと)に一本化する。
+// このアプリはまだ本番に章データを1件も投入していない段階でこの再設計を行っているため、
+// 既存データの移行は不要(単純にDROPしてよい)。
+$columnCheck = $pdo->prepare(
+    "SELECT COUNT(*) FROM information_schema.columns
+     WHERE table_schema = DATABASE() AND table_name = 'story_chapters' AND column_name = 'mob_deck_id'"
+);
+$columnCheck->execute();
+if ((int) $columnCheck->fetchColumn() > 0) {
+    $pdo->exec(
+        'ALTER TABLE story_chapters
+         DROP FOREIGN KEY fk_story_chapters_mob_deck,
+         DROP FOREIGN KEY fk_story_chapters_boss_deck,
+         DROP KEY idx_story_chapters_mob_deck_id,
+         DROP KEY idx_story_chapters_boss_deck_id,
+         DROP COLUMN mob_deck_id,
+         DROP COLUMN boss_deck_id'
+    );
+}
+
+// `battles.story_chapter_id`/`story_phase`(章単位・雑魚/ボスの2値限定だった紐付け)を廃止し、
+// `story_beat_id`(章内のどの戦闘ビートとして実行したか)一本に統一する。
+$columnCheck = $pdo->prepare(
+    "SELECT COUNT(*) FROM information_schema.columns
+     WHERE table_schema = DATABASE() AND table_name = 'battles' AND column_name = 'story_beat_id'"
+);
+$columnCheck->execute();
+if ((int) $columnCheck->fetchColumn() === 0) {
+    $pdo->exec(
+        "ALTER TABLE battles
+         DROP FOREIGN KEY fk_battles_story_chapter,
+         DROP KEY idx_battles_story_chapter_id,
+         DROP COLUMN story_chapter_id,
+         DROP COLUMN story_phase,
+         ADD COLUMN story_beat_id INT NULL AFTER deck_b_id,
+         ADD KEY idx_battles_story_beat_id (story_beat_id),
+         ADD CONSTRAINT fk_battles_story_beat
+           FOREIGN KEY (story_beat_id) REFERENCES story_beats(id) ON DELETE SET NULL"
+    );
+}
+
+// `story_plays`(章単位でのAI個別化本文・クリア判定)を廃止し、ビート単位の
+// `story_beat_progress`(`schema.sql`で新設)に置き換える。上記と同じ理由でデータ移行は不要。
+$pdo->exec('DROP TABLE IF EXISTS story_plays');
+
 json_response(['message' => 'migrate completed', 'statements' => count($statements)]);

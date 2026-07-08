@@ -4,13 +4,12 @@
  * バトルエンドポイント(`src/lib/battles/repository.ts` のPHP版)。
  *
  * GET(id無し)                          = 一覧(`listBattles`)
- * GET(id無し, storyChapterId=&userId=) = 指定ユーザーがその章で行った雑魚戦・ボス戦の履歴
- *                                        (ストーリー章詳細ページの「これまでの挑戦」用)
+ * GET(id無し, storyBeatId=&userId=)    = 指定ユーザーがその戦闘ビートで行った挑戦履歴
+ *                                        (ストーリー章詳細ページの、各戦闘ビートの「これまでの挑戦」用)
  * GET(id=)                = 詳細(`getBattleDetail`)
  * POST action=create-pending = 新規バトルを status='pending' で作成(`createPendingBattle`)。
- *                              `storyChapterId`/`storyPhase`(`'mob'|'boss'`)を渡すと、
- *                              章内の雑魚戦・ボス戦として`battles`に紐付けて記録する
- *                              (通常のPvP対戦はどちらも省略しNULLのまま)。
+ *                              `storyBeatId`(`story_beats.id`)を渡すと、章内の戦闘イベントとして
+ *                              `battles`に紐付けて記録する(通常のPvP対戦は省略しNULLのまま)。
  * POST action=save-result(id=) = AI応答検証済みの結果を保存(`saveBattleResult`)
  * POST action=mark-failed(id=) = 失敗として記録(`markBattleFailed`)
  *
@@ -90,8 +89,7 @@ function to_battle_detail_base(array $row): array
         'errorMessage' => $row['error_message'],
         'createdAt' => $row['created_at'],
         'completedAt' => $row['completed_at'],
-        'storyChapterId' => $row['story_chapter_id'] !== null ? (int) $row['story_chapter_id'] : null,
-        'storyPhase' => $row['story_phase'],
+        'storyBeatId' => $row['story_beat_id'] !== null ? (int) $row['story_beat_id'] : null,
     ];
 }
 
@@ -123,19 +121,19 @@ $id = isset($_GET['id']) ? (int) $_GET['id'] : null;
 $pdo = get_pdo();
 
 if ($method === 'GET' && $id === null) {
-    $storyChapterId = isset($_GET['storyChapterId']) ? (int) $_GET['storyChapterId'] : null;
+    $storyBeatId = isset($_GET['storyBeatId']) ? (int) $_GET['storyBeatId'] : null;
     $userId = isset($_GET['userId']) ? (int) $_GET['userId'] : null;
 
-    if ($storyChapterId !== null && $userId !== null) {
-        // ストーリー章詳細ページの「これまでの挑戦」用: そのユーザー自身のデッキ
-        // (`da.user_id`、章内の雑魚戦・ボス戦は常に自分のデッキ=teamAで記録される)が
-        // その章で行った戦闘のみに絞り込む。
+    if ($storyBeatId !== null && $userId !== null) {
+        // ストーリー章詳細ページの、各戦闘ビートの「これまでの挑戦」用: そのユーザー自身の
+        // デッキ(`da.user_id`、章内の戦闘は常に自分のデッキ=teamAで記録される)が
+        // そのビートで行った戦闘のみに絞り込む。
         $stmt = $pdo->prepare(
             SELECT_BATTLE_WITH_DECK_NAMES . '
-             WHERE b.story_chapter_id = ? AND da.user_id = ?
+             WHERE b.story_beat_id = ? AND da.user_id = ?
              ORDER BY b.id ASC'
         );
-        $stmt->execute([$storyChapterId, $userId]);
+        $stmt->execute([$storyBeatId, $userId]);
         $rows = $stmt->fetchAll();
     } else {
         $rows = $pdo->query(SELECT_BATTLE_WITH_DECK_NAMES . ' ORDER BY b.id ASC')->fetchAll();
@@ -151,8 +149,7 @@ if ($method === 'GET' && $id === null) {
             'mvpName' => $row['mvp_name'],
             'createdAt' => $row['created_at'],
             'completedAt' => $row['completed_at'],
-            'storyChapterId' => $row['story_chapter_id'] !== null ? (int) $row['story_chapter_id'] : null,
-            'storyPhase' => $row['story_phase'],
+            'storyBeatId' => $row['story_beat_id'] !== null ? (int) $row['story_beat_id'] : null,
         ];
     }, $rows));
 }
@@ -170,16 +167,13 @@ if ($method === 'POST') {
     $action = $input['action'] ?? null;
 
     if ($action === 'create-pending') {
-        $storyChapterId = isset($input['storyChapterId']) && $input['storyChapterId'] !== null
-            ? (int) $input['storyChapterId']
-            : null;
-        $storyPhase = isset($input['storyPhase']) && $input['storyPhase'] !== null
-            ? (string) $input['storyPhase']
+        $storyBeatId = isset($input['storyBeatId']) && $input['storyBeatId'] !== null
+            ? (int) $input['storyBeatId']
             : null;
         $pdo->prepare(
-            "INSERT INTO battles (deck_a_id, deck_b_id, status, story_chapter_id, story_phase)
-             VALUES (?, ?, 'pending', ?, ?)"
-        )->execute([(int) $input['deckAId'], (int) $input['deckBId'], $storyChapterId, $storyPhase]);
+            "INSERT INTO battles (deck_a_id, deck_b_id, status, story_beat_id)
+             VALUES (?, ?, 'pending', ?)"
+        )->execute([(int) $input['deckAId'], (int) $input['deckBId'], $storyBeatId]);
         json_response(['id' => (int) $pdo->lastInsertId()], 201);
     }
 

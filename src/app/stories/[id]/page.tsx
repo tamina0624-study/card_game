@@ -8,29 +8,25 @@ import { getUserDeck } from "@/lib/decks/repository";
 import { listStoryBattles } from "@/lib/battles/repository";
 import { blessingMultiplier } from "@/lib/stories/blessing";
 import { getStoryBlessing, getStoryChapter } from "@/lib/stories/repository";
-import type { BattleStoryPhase } from "@/lib/types";
+import type { BattleSummary, StoryBeat } from "@/lib/types";
 
 /**
  * ストーリー章詳細ページ(サーバーコンポーネント)。
  *
  * `lib/stories/repository.ts` の `getStoryChapter(id, userId)` を直接呼び出し、
- * 章のあらすじ(大枠)を表示する。ログイン中でまだプレイしていない場合、
- * ユーザーの専用デッキ(`lib/decks/repository.ts` の `getUserDeck`、
- * 追加機能20260707「ユーザー専用のデッキ」対応)が無ければ先に作成するよう案内し、
- * あれば仲間キャラクター一覧を添えて `StoryPlayButton`(クライアントコンポーネント)を
- * 表示する。既にプレイ済みの場合はAIが生成した個別化ストーリー本文をそのまま表示する
- * (振り返り)。
+ * 章のあらすじ(大枠)と、章内に順序付きで並ぶビート(`beats`、`beatType==="story"`の
+ * ストーリー・`beatType==="battle"`の戦闘イベント)を表示する。
  *
- * 追加機能20260708.md「ストーリーモードに戦闘を組み込みたい」対応:
- * - `chapter.locked`(前章クリア判定)がログイン中ユーザーについて`true`の場合、
- *   あらすじ・本文を一切出さずロック案内のみを表示する(URL直打ちでの先読み防止。
- *   未ログイン時の扱いは`src/app/stories/page.tsx`と同じ理由で除外する)。
- * - `mascotCharacterId`が設定されていれば、その章のマスコットキャラクターと
- *   現在の「祝福」レベル(`getStoryBlessing`→`blessingMultiplier`)を表示する。
- * - `mobDeckId`/`bossDeckId`が設定されていれば、それぞれ`StoryBattleButton`で
- *   雑魚戦・ボス戦に挑めるようにする(戦闘結果は既存の`/battles/[id]`へ遷移して見る)。
- *   ボス戦に勝利すると次章が解放される(`markChapterCleared`、APIルート側の処理)。
- * - これまでの挑戦履歴(`listStoryBattles`)を一覧表示する。
+ * 章内のビートは「直前のビートが完了するまで次はロック」という順送りのため、
+ * ある時点でユーザーから見えるのは常に「完了済みの先頭区間」+「現在挑戦中の1件」まで
+ * (それより先は🔒のプレースホルダーのみを表示し、タイトル・あらすじは一切出さない)。
+ * ログイン中でまだ自分専用のデッキが無い場合は、先にデッキ作成を案内する
+ * (ビート内のロスターや戦闘に自分のデッキが必要なため)。
+ *
+ * `mascotCharacterId`が設定されていれば、その章のマスコットキャラクターと現在の
+ * 「祝福」レベル(`getStoryBlessing`→`blessingMultiplier`、章単位で戦闘への総挑戦回数から算出)を
+ * 表示する。戦闘ビートに勝利すると次のビート・次章が解放される
+ * (`markBeatCleared`、APIルート側の処理)。
  */
 
 /** MySQLの `DATETIME`("YYYY-MM-DD HH:MM:SS"、UTC)を日本語表記に整形する。 */
@@ -48,11 +44,6 @@ function formatDateTime(value: string): string {
     minute: "2-digit",
   });
 }
-
-const PHASE_HEADING: Record<BattleStoryPhase, string> = {
-  mob: "雑魚戦",
-  boss: "ボス戦",
-};
 
 const BATTLE_STATUS_LABEL: Record<string, string> = {
   pending: "準備中",
@@ -93,7 +84,7 @@ export default async function StoryDetailPage({ params }: PageProps) {
           </Link>
         </div>
         <div className="card" style={{ marginTop: "1.5rem" }}>
-          <p>🔒 この章はまだ解放されていません。前の章のボス戦をクリア(ボス戦が無い章は物語を読了)すると解放されます。</p>
+          <p>🔒 この章はまだ解放されていません。前の章の最後まで進めると解放されます。</p>
         </div>
       </div>
     );
@@ -106,9 +97,28 @@ export default async function StoryDetailPage({ params }: PageProps) {
   const blessing = user ? await getStoryBlessing(user.id, chapter.id) : null;
   const multiplier = blessing ? blessingMultiplier(blessing.battleCount) : 1;
 
-  const battles = user && (chapter.mobDeckId !== null || chapter.bossDeckId !== null)
-    ? await listStoryBattles(user.id, chapter.id)
-    : [];
+  // 章内のビートは順送りロック(直前のビートが完了するまで次はロック)のため、
+  // ユーザーが今表示できるのは「完了済みの先頭区間」+「現在挑戦中(未ロック・未完了)の1件」まで。
+  const visibleBeats: StoryBeat[] = [];
+  let hasMoreLocked = false;
+  if (user && deck) {
+    for (const beat of chapter.beats) {
+      if (beat.locked) {
+        hasMoreLocked = true;
+        break;
+      }
+      visibleBeats.push(beat);
+    }
+  }
+
+  const battlesByBeatId = new Map<number, BattleSummary[]>();
+  if (user) {
+    for (const beat of visibleBeats) {
+      if (beat.beatType === "battle" && beat.deckId !== null) {
+        battlesByBeatId.set(beat.id, await listStoryBattles(user.id, beat.id));
+      }
+    }
+  }
 
   return (
     <div>
@@ -167,83 +177,87 @@ export default async function StoryDetailPage({ params }: PageProps) {
         </div>
       )}
 
-      {user && deck && chapter.mobDeckId !== null && (
-        <section className="card story-detail__battle" style={{ marginTop: "1.5rem" }}>
-          <h2 style={{ marginBottom: "0.75rem" }}>{PHASE_HEADING.mob}</h2>
-          <p style={{ marginBottom: "1rem", color: "var(--muted)" }}>
-            負けても構いません。挑むたびにマスコットの祝福が積み重なっていきます。
-          </p>
-          <StoryBattleButton chapterId={chapter.id} phase="mob" />
-        </section>
-      )}
+      {user &&
+        deck &&
+        visibleBeats.map((beat) => (
+          <section key={beat.id} className="card story-detail__content" style={{ marginTop: "1.5rem" }}>
+            <h2 style={{ marginBottom: "0.75rem" }}>
+              {beat.title}
+              {beat.beatType === "battle" && beat.clearedAt && (
+                <span className="badge badge--win" style={{ marginLeft: "0.5rem" }}>
+                  クリア済み
+                </span>
+              )}
+            </h2>
 
-      {user && deck && !chapter.play && (
-        <div className="card story-detail__start" style={{ marginTop: "1.5rem" }}>
-          <p style={{ marginBottom: "1rem" }}>
-            {user.username}さんが主人公として活躍する物語をAIが書き下ろします。デッキ「{deck.name}」の
-            仲間の中から話に合う人物が登場します。一度生成した内容は、この章のページからいつでも
-            読み返せます。
-          </p>
-          {roster.length > 0 && (
-            <ul className="story-detail__roster">
-              {roster.map((character) => (
-                <li key={character.id}>{character.name}</li>
-              ))}
-            </ul>
-          )}
-          <StoryPlayButton chapterId={chapter.id} />
+            {beat.beatType === "story" && beat.content !== null && (
+              <>
+                {beat.createdAt && <p className="story-detail__meta">記録日時: {formatDateTime(beat.createdAt)}</p>}
+                <div className="story-detail__body">
+                  {beat.content
+                    .split(/\n+/)
+                    .filter((paragraph) => paragraph.trim().length > 0)
+                    .map((paragraph, index) => (
+                      <p key={index}>{paragraph}</p>
+                    ))}
+                </div>
+              </>
+            )}
+
+            {beat.beatType === "story" && beat.content === null && (
+              <div className="story-detail__start">
+                <p style={{ marginBottom: "1rem" }}>
+                  {user.username}さんが主人公として活躍する物語をAIが書き下ろします。デッキ「{deck.name}」の
+                  仲間の中から話に合う人物が登場します。一度生成した内容は、このページからいつでも読み返せます。
+                </p>
+                {roster.length > 0 && (
+                  <ul className="story-detail__roster">
+                    {roster.map((character) => (
+                      <li key={character.id}>{character.name}</li>
+                    ))}
+                  </ul>
+                )}
+                <StoryPlayButton beatId={beat.id} />
+              </div>
+            )}
+
+            {beat.beatType === "battle" && beat.deckId === null && (
+              <p style={{ color: "var(--muted)" }}>この戦闘イベントはまだ準備中です。</p>
+            )}
+
+            {beat.beatType === "battle" && beat.deckId !== null && (
+              <div className="story-detail__battle">
+                <p style={{ marginBottom: "1rem", color: "var(--muted)" }}>
+                  {beat.clearedAt
+                    ? "既にクリア済みです。もう一度挑んで祝福を重ねることもできます。"
+                    : "勝利すると次へ進めます。"}
+                </p>
+                <StoryBattleButton beatId={beat.id} label={beat.title} />
+                {(battlesByBeatId.get(beat.id)?.length ?? 0) > 0 && (
+                  <ul className="story-history-list" style={{ marginTop: "1rem" }}>
+                    {battlesByBeatId.get(beat.id)!.map((battle) => (
+                      <li key={battle.id} className="story-history-list__item">
+                        <Link href={`/battles/${battle.id}`}>
+                          {battle.status === "completed" && battle.winner
+                            ? battle.winner === "teamA"
+                              ? "勝利"
+                              : "敗北"
+                            : BATTLE_STATUS_LABEL[battle.status]}
+                        </Link>
+                        <span className="story-history-list__date">{formatDateTime(battle.createdAt)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </section>
+        ))}
+
+      {user && deck && hasMoreLocked && (
+        <div className="card" style={{ marginTop: "1.5rem" }}>
+          <p>🔒 この先に、まだ見ぬストーリー・戦闘が待っています。</p>
         </div>
-      )}
-
-      {chapter.play && (
-        <section className="card story-detail__content" style={{ marginTop: "1.5rem" }}>
-          <h2 style={{ marginBottom: "0.75rem" }}>{user?.username ?? ""}の物語</h2>
-          <p className="story-detail__meta">記録日時: {formatDateTime(chapter.play.createdAt)}</p>
-          <div className="story-detail__body">
-            {chapter.play.content
-              .split(/\n+/)
-              .filter((paragraph) => paragraph.trim().length > 0)
-              .map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
-              ))}
-          </div>
-        </section>
-      )}
-
-      {user && deck && chapter.bossDeckId !== null && (
-        <section className="card story-detail__battle" style={{ marginTop: "1.5rem" }}>
-          <h2 style={{ marginBottom: "0.75rem" }}>
-            {PHASE_HEADING.boss}
-            {chapter.play?.clearedAt && <span className="badge badge--win" style={{ marginLeft: "0.5rem" }}>クリア済み</span>}
-          </h2>
-          <p style={{ marginBottom: "1rem", color: "var(--muted)" }}>
-            {chapter.play?.clearedAt
-              ? "既にクリア済みです。もう一度挑んで祝福を重ねることもできます。"
-              : "ボス戦に勝利すると、この章がクリア扱いになり次の章が解放されます。"}
-          </p>
-          <StoryBattleButton chapterId={chapter.id} phase="boss" />
-        </section>
-      )}
-
-      {battles.length > 0 && (
-        <section className="card story-detail__history" style={{ marginTop: "1.5rem" }}>
-          <h2 style={{ marginBottom: "0.75rem" }}>これまでの挑戦</h2>
-          <ul className="story-history-list">
-            {battles.map((battle) => (
-              <li key={battle.id} className="story-history-list__item">
-                <Link href={`/battles/${battle.id}`}>
-                  {battle.storyPhase ? PHASE_HEADING[battle.storyPhase] : "戦闘"} -{" "}
-                  {battle.status === "completed" && battle.winner
-                    ? battle.winner === "teamA"
-                      ? "勝利"
-                      : "敗北"
-                    : BATTLE_STATUS_LABEL[battle.status]}
-                </Link>
-                <span className="story-history-list__date">{formatDateTime(battle.createdAt)}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
       )}
     </div>
   );

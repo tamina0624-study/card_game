@@ -52,12 +52,12 @@ function formatRoster(roster: StoryRosterMember[]): string {
 }
 
 /**
- * 章タイトル・あらすじ(大枠)・プレイヤー名・専用デッキの仲間キャラクター一覧から
- * ユーザーメッセージを構築する。このモジュール自身はAI呼び出しを行わない
+ * ストーリービートのタイトル・あらすじ(大枠)・プレイヤー名・専用デッキの仲間キャラクター
+ * 一覧からユーザーメッセージを構築する。このモジュール自身はAI呼び出しを行わない
  * (`lib/stories/generate.ts`が担当)。
  */
 export function buildStoryPrompt(
-  chapterTitle: string,
+  beatTitle: string,
   outline: string,
   username: string,
   deckName: string,
@@ -67,7 +67,7 @@ export function buildStoryPrompt(
     `プレイヤー名: ${username}`,
     `プレイヤーの専用デッキ「${deckName}」の仲間キャラクター一覧:`,
     formatRoster(roster),
-    `章タイトル: ${chapterTitle}`,
+    `タイトル: ${beatTitle}`,
     `あらすじ(大枠):`,
     outline,
     "",
