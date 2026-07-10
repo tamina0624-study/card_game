@@ -91,7 +91,6 @@ export default async function StoryDetailPage({ params }: PageProps) {
   }
 
   const deck = user ? await getUserDeck(user.id) : null;
-  const roster = deck ? [...deck.front, ...deck.bench] : [];
 
   const mascot = chapter.mascotCharacterId !== null ? await getCharacterById(chapter.mascotCharacterId) : null;
   const blessing = user ? await getStoryBlessing(user.id, chapter.id) : null;
@@ -169,7 +168,7 @@ export default async function StoryDetailPage({ params }: PageProps) {
         <div className="card story-detail__start" style={{ marginTop: "1.5rem" }}>
           <p style={{ marginBottom: "1rem" }}>
             ストーリーを進めるには、あなた専用のデッキが必要です。先にデッキを編成してください
-            (このデッキの仲間たちが物語・戦闘に登場します)。
+            (このデッキで章内の戦闘に挑みます)。
           </p>
           <Link href="/decks/new" className="button button-primary">
             専用デッキを作成する
@@ -190,6 +189,11 @@ export default async function StoryDetailPage({ params }: PageProps) {
               )}
             </h2>
 
+            {beat.illustrationUrl && (
+              // eslint-disable-next-line @next/next/no-img-element -- ローカルの挿絵画像をそのまま表示するため
+              <img src={beat.illustrationUrl} alt={beat.title} className="story-detail__illustration" />
+            )}
+
             {beat.beatType === "story" && beat.content !== null && (
               <>
                 {beat.createdAt && <p className="story-detail__meta">記録日時: {formatDateTime(beat.createdAt)}</p>}
@@ -207,16 +211,9 @@ export default async function StoryDetailPage({ params }: PageProps) {
             {beat.beatType === "story" && beat.content === null && (
               <div className="story-detail__start">
                 <p style={{ marginBottom: "1rem" }}>
-                  {user.username}さんが主人公として活躍する物語をAIが書き下ろします。デッキ「{deck.name}」の
-                  仲間の中から話に合う人物が登場します。一度生成した内容は、このページからいつでも読み返せます。
+                  {user.username}さんが主人公として活躍する物語をAIが書き下ろします。
+                  一度生成した内容は、このページからいつでも読み返せます。
                 </p>
-                {roster.length > 0 && (
-                  <ul className="story-detail__roster">
-                    {roster.map((character) => (
-                      <li key={character.id}>{character.name}</li>
-                    ))}
-                  </ul>
-                )}
                 <StoryPlayButton beatId={beat.id} />
               </div>
             )}

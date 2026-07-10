@@ -10,9 +10,9 @@ export const runtime = "nodejs";
  * (冪等、振り返り時に内容が変わらないようにするため再生成はしない)。
  * 未生成の場合のみ、ログインユーザーの専用デッキ(`lib/decks/repository.ts`の
  * `getUserDeck`)を取得し(無ければ400)、ビートのタイトル・あらすじ(`outline`)・
- * ユーザー名・デッキの仲間キャラクター一覧から`lib/stories/generate.ts`でAIに
- * 個別化ストーリー本文を生成させる。生成結果は`lib/stories/repository.ts`の
- * `playStoryBeat`で保存する(保存と同時にそのビートは完了扱いになる)。
+ * ユーザー名から`lib/stories/generate.ts`でAIに個別化ストーリー本文を生成させる。
+ * 生成結果は`lib/stories/repository.ts`の`playStoryBeat`で保存する
+ * (保存と同時にそのビートは完了扱いになる)。
  *
  * AI呼び出しに失敗した場合は502(`docs/設計.md` 3章のバトル実行APIと同じ方針)。
  */
@@ -78,19 +78,8 @@ export async function POST(_request: NextRequest, context: RouteContext) {
     );
   }
 
-  const roster = [...deck.front, ...deck.bench].map((character) => ({
-    name: character.name,
-    description: character.description,
-  }));
-
   try {
-    const { content, rawText } = await generateStoryContent(
-      beat.title,
-      beat.outline ?? "",
-      user.username,
-      deck.name,
-      roster
-    );
+    const { content, rawText } = await generateStoryContent(beat.title, beat.outline ?? "", user.username);
     const progress = await playStoryBeat(user.id, beatId, content, rawText);
     return NextResponse.json(progress, { status: 201 });
   } catch (error) {

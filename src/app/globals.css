@@ -2252,22 +2252,14 @@ select:focus {
   color: var(--muted);
 }
 
-.story-detail__roster {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  list-style: none;
-  margin-bottom: 1.25rem;
-  padding: 0;
-}
-
-.story-detail__roster li {
-  background: rgba(217, 182, 86, 0.12);
+.story-detail__illustration {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
   border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 0.3rem 0.85rem;
-  font-size: 0.85rem;
-  color: var(--muted);
+  margin-bottom: 1rem;
 }
 
 .story-detail__meta {

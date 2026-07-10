@@ -44,6 +44,7 @@ function assemble_beat(array $row, ?array $progressRow, bool $locked): array
         'beatType' => $row['beat_type'],
         'title' => $row['title'],
         'outline' => $row['outline'],
+        'illustrationUrl' => $row['illustration_url'] ?? null,
         'deckId' => $row['deck_id'] !== null ? (int) $row['deck_id'] : null,
         'locked' => $locked,
         'content' => $progressRow['content'] ?? null,

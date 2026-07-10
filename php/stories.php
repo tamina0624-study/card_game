@@ -20,10 +20,10 @@
  * GET action=my-plays&userId=   = ユーザーの全プレイ履歴(振り返り一覧、章番号順)
  * GET action=get-blessing&userId=&chapterId= = 章内の戦闘への挑戦回数(祝福度)
  * POST action=create-chapter    = 新しい章を追加(ADMIN_KEY保護。任意で`beats`配列を
- *                                  同時登録できる: [{beatType, title, outline?, deckId?}, ...])
+ *                                  同時登録できる: [{beatType, title, outline?, illustrationUrl?, deckId?}, ...])
  * POST action=add-beat          = 既存の章の末尾にビートを1件追加する(ADMIN_KEY保護)
- * POST action=update-beat       = 既存ビートのtitle/outline/deckIdを更新する(ADMIN_KEY保護。
- *                                  戦闘ビート登録後にdeckIdを後付けする用途を想定)
+ * POST action=update-beat       = 既存ビートのtitle/outline/illustrationUrl/deckIdを更新する
+ *                                  (ADMIN_KEY保護。戦闘ビート登録後にdeckIdを後付けする用途を想定)
  * POST action=play-beat         = AI生成済みの個別化ストーリー本文を保存する(story向け、冪等)
  * POST action=mark-beat-cleared = 戦闘ビート勝利時にそのビートを完了扱いにする(battle向け、冪等)
  * POST action=increment-blessing = 章内の戦闘に1回挑戦したことを記録する(勝敗問わず)
@@ -107,14 +107,17 @@ function insert_beat(PDO $pdo, int $chapterId, array $beat, int $sortOrder): voi
     $beatType = $beat['beatType'];
     $title = trim((string) $beat['title']);
     $outline = $beatType === 'story' ? trim((string) ($beat['outline'] ?? '')) : null;
+    $illustrationUrl = isset($beat['illustrationUrl']) && $beat['illustrationUrl'] !== null
+        ? trim((string) $beat['illustrationUrl'])
+        : null;
     $deckId = $beatType === 'battle' && isset($beat['deckId']) && $beat['deckId'] !== null
         ? (int) $beat['deckId']
         : null;
 
     $pdo->prepare(
-        'INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, outline, deck_id)
-         VALUES (?, ?, ?, ?, ?, ?)'
-    )->execute([$chapterId, $sortOrder, $beatType, $title, $outline, $deckId]);
+        'INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, outline, illustration_url, deck_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)'
+    )->execute([$chapterId, $sortOrder, $beatType, $title, $outline, $illustrationUrl, $deckId]);
 
     if ($deckId !== null) {
         // 戦闘ビートの対戦相手として紐付けられたデッキは、通常のPvP対戦セットアップ画面の
@@ -425,6 +428,10 @@ if ($method === 'POST' && $action === 'update-beat') {
     if (array_key_exists('outline', $input)) {
         $sets[] = 'outline = ?';
         $params[] = $input['outline'] !== null ? trim((string) $input['outline']) : null;
+    }
+    if (array_key_exists('illustrationUrl', $input)) {
+        $sets[] = 'illustration_url = ?';
+        $params[] = $input['illustrationUrl'] !== null ? trim((string) $input['illustrationUrl']) : null;
     }
     if (array_key_exists('deckId', $input)) {
         $deckId = $input['deckId'] !== null ? (int) $input['deckId'] : null;

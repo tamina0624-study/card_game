@@ -316,6 +316,7 @@ export type StoryBeat = {
   beatType: StoryBeatType;
   title: string;
   outline: string | null;
+  illustrationUrl: string | null;
   deckId: number | null;
   locked: boolean;
   content: string | null;

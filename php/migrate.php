@@ -211,4 +211,16 @@ if ((int) $columnCheck->fetchColumn() === 0) {
 // `story_beat_progress`(`schema.sql`で新設)に置き換える。上記と同じ理由でデータ移行は不要。
 $pdo->exec('DROP TABLE IF EXISTS story_plays');
 
+// `story_beats.illustration_url`(各話の挿絵、`story/第N章/`に用意した画像を`public/story/`配下に
+// 配置したうえでそのURLを紐付ける)の追加。上記と同じ理由(既存環境の story_beats は
+// 作成済み)で個別ALTERにしている。NULL許容で、挿絵が無いビート(プロローグ等)は未設定のまま。
+$columnCheck = $pdo->prepare(
+    "SELECT COUNT(*) FROM information_schema.columns
+     WHERE table_schema = DATABASE() AND table_name = 'story_beats' AND column_name = 'illustration_url'"
+);
+$columnCheck->execute();
+if ((int) $columnCheck->fetchColumn() === 0) {
+    $pdo->exec('ALTER TABLE story_beats ADD COLUMN illustration_url TEXT NULL AFTER outline');
+}
+
 json_response(['message' => 'migrate completed', 'statements' => count($statements)]);

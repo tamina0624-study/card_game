@@ -4,8 +4,13 @@
 -- (`story_beats`、`php/schema.sql`・`php/stories.php`参照)に合わせて、`story/第1章`の
 -- 原稿を「話」単位のビートへ分割している。原稿中の「戦闘イベントを挟んでください」は
 -- 実際の戦闘ビート(beat_type='battle')そのものに置き換わったため本文には含めていない。
--- 各話末尾の「適宜、デッキメンバーの〜を挟んでください」という執筆メモは、その話を
--- 生成するAIへの指示として各ビートのoutlineにそのまま残している。
+-- 各話末尾にあった「適宜、デッキメンバーの〜を挟んでください」という執筆メモ(AIに
+-- デッキメンバーを自動で活躍させる指示)は廃止し、outlineには含めていない
+-- (`src/lib/stories/prompt.ts`参照。ストーリーは主人公単独の物語として生成する)。
+--
+-- 各話の挿絵(`story/第1章/第N話_挿絵.png`)は`public/story/chapter1/beat0N.png`に
+-- 配置し、該当ビートの`illustration_url`に紐付けている(プロローグ・第六話・
+-- ボス戦(山の主)には対応する挿絵が無いため未設定)。
 --
 -- 戦闘ビートの対戦相手デッキ(雑魚戦=森のモンスター、ボス戦=山の主)はまだDBに
 -- 用意されていないため、いったん deck_id = NULL(準備中)で登録する。デッキ・
@@ -39,7 +44,7 @@ VALUES (
 目を覚ますと、そこは空に巨大なカードが浮かぶ不思議な世界だった。'
 );
 
-INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, outline)
+INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, outline, illustration_url)
 VALUES (
   (SELECT id FROM story_chapters WHERE chapter_number = 1),
   1,
@@ -55,10 +60,11 @@ VALUES (
 主人公は元の世界へ帰る方法を尋ねる。
 マッツンは少し困った顔をして言う。
 「異変を止めない限り、帰る方法は見つからないと思う。」
-こうして主人公は、この世界を救う旅に出ることになる。'
+こうして主人公は、この世界を救う旅に出ることになる。',
+  '/story/chapter1/beat01.png'
 );
 
-INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, outline)
+INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, outline, illustration_url)
 VALUES (
   (SELECT id FROM story_chapters WHERE chapter_number = 1),
   2,
@@ -71,11 +77,11 @@ VALUES (
 事情を聞いたねぎじぃは、
 「一人では危険じゃ。」
 と言って、頼もしい仲間を紹介してくれる。
-ここでプレイヤーは最初のデッキを入手する。
-適宜、デッキメンバーとの最初の挨拶を挟んでください。'
+ここでプレイヤーは最初のデッキを入手する。',
+  '/story/chapter1/beat02.png'
 );
 
-INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, outline)
+INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, outline, illustration_url)
 VALUES (
   (SELECT id FROM story_chapters WHERE chapter_number = 1),
   3,
@@ -86,20 +92,21 @@ VALUES (
 話をしている最中、村人が慌てて駆け込んでくる。
 「大変だ！またモンスターが来た！」
 主人公たちは急いで現場へ向かう。
-ここがゲーム最初のバトルになる。
-適宜、デッキメンバーのエピソードを挟んでください。'
+ここがゲーム最初のバトルになる。',
+  '/story/chapter1/beat03.png'
 );
 
-INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, deck_id)
+INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, deck_id, illustration_url)
 VALUES (
   (SELECT id FROM story_chapters WHERE chapter_number = 1),
   4,
   'battle',
   '雑魚戦(森のモンスター)',
-  NULL
+  NULL,
+  '/story/chapter1/beat04.png'
 );
 
-INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, outline)
+INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, outline, illustration_url)
 VALUES (
   (SELECT id FROM story_chapters WHERE chapter_number = 1),
   5,
@@ -111,11 +118,11 @@ VALUES (
 するとマッツンが光り始める。
 主人公たちは優しい光に包まれ、新たな力を宿す。
 マッツンは照れながら言う。
-「えへへ。少しだけ力を分けてあげたよ。」
-適宜、デッキメンバーのパワーアップした様子の会話を挟んでください。'
+「えへへ。少しだけ力を分けてあげたよ。」',
+  '/story/chapter1/beat05.png'
 );
 
-INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, outline)
+INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, outline, illustration_url)
 VALUES (
   (SELECT id FROM story_chapters WHERE chapter_number = 1),
   6,
@@ -125,8 +132,8 @@ VALUES (
 「山奥にいる巨大な魔物が動き始めた！」
 ねぎじぃは顔を青くする。
 「あやつは昔から山の主じゃ。普段は人を襲わぬ。あれほど怒っておる姿は見たことがない。」
-主人公たちは山へ向かう。道中では少し強い敵と戦いながら進んでいく。
-適宜、デッキメンバーとの会話を挟んでください。'
+主人公たちは山へ向かう。道中では少し強い敵と戦いながら進んでいく。',
+  '/story/chapter1/beat06.png'
 );
 
 INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, outline)
@@ -137,8 +144,7 @@ VALUES (
   '第六話 山の主との決戦',
   '山頂には巨大なモンスターが待ち構えていた。体中から黒いオーラを放っている。
 マッツンが叫ぶ。
-「あれは完全に黒い魔力に支配されてる！」
-適宜、デッキメンバーとのシリアスな会話を入れてください。'
+「あれは完全に黒い魔力に支配されてる！」'
 );
 
 INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, deck_id)
@@ -150,7 +156,7 @@ VALUES (
   NULL
 );
 
-INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, outline)
+INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, outline, illustration_url)
 VALUES (
   (SELECT id FROM story_chapters WHERE chapter_number = 1),
   9,
@@ -159,10 +165,11 @@ VALUES (
   'ボスを倒すと、黒い結晶が砕け、巨大な魔物は元の穏やかな姿へ戻る。
 魔物は主人公たちへ静かに頭を下げ、森の奥へ帰っていく。
 マッツンは確信する。
-「やっぱり原因は"黒い結晶"だ。」'
+「やっぱり原因は"黒い結晶"だ。」',
+  '/story/chapter1/beat07.png'
 );
 
-INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, outline)
+INSERT INTO story_beats (story_chapter_id, sort_order, beat_type, title, outline, illustration_url)
 VALUES (
   (SELECT id FROM story_chapters WHERE chapter_number = 1),
   10,
@@ -179,8 +186,8 @@ VALUES (
 「よし。次の町へ行こう。」
 マッツンは笑顔でうなずく。
 「うん！一緒に世界を救おう！」
-こうして主人公たちの本当の冒険が始まる。
-適宜、デッキメンバーの意外な一面が出る会話・エピソードを入れてください。'
+こうして主人公たちの本当の冒険が始まる。',
+  '/story/chapter1/beat08.png'
 );
 
 -- 登録結果の確認用。

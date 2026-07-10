@@ -199,6 +199,7 @@ CREATE TABLE IF NOT EXISTS story_beats (
   beat_type ENUM('story', 'battle') NOT NULL,
   title VARCHAR(255) NOT NULL,
   outline TEXT,
+  illustration_url TEXT,
   deck_id INT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_story_beats_chapter_id (story_chapter_id),
