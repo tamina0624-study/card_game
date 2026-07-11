@@ -12,7 +12,8 @@
 -- 実行前に対象行の存在を確認し(下記SELECT)、実行後の結果も確認すること。
 
 -- 実行前の確認用(第1章の各話outlineに旧メモが残っているか)。
-SELECT id, sort_order, title, outline, illustration_url
+-- 注意: この時点では illustration_url 列はまだ存在しないため、この列は含めない。
+SELECT id, sort_order, title, outline
 FROM story_beats
 WHERE story_chapter_id = (SELECT id FROM story_chapters WHERE chapter_number = 1)
 ORDER BY sort_order ASC;

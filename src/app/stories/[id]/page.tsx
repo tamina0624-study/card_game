@@ -4,11 +4,11 @@ import StoryPlayButton from "@/components/StoryPlayButton";
 import StoryBattleButton from "@/components/StoryBattleButton";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getCharacterById } from "@/lib/characters/repository";
-import { getUserDeck } from "@/lib/decks/repository";
+import { getDeckById, getUserDeck } from "@/lib/decks/repository";
 import { listStoryBattles } from "@/lib/battles/repository";
 import { blessingMultiplier } from "@/lib/stories/blessing";
 import { getStoryBlessing, getStoryChapter } from "@/lib/stories/repository";
-import type { BattleSummary, StoryBeat } from "@/lib/types";
+import type { BattleSummary, Deck, StoryBeat } from "@/lib/types";
 
 /**
  * ストーリー章詳細ページ(サーバーコンポーネント)。
@@ -111,10 +111,17 @@ export default async function StoryDetailPage({ params }: PageProps) {
   }
 
   const battlesByBeatId = new Map<number, BattleSummary[]>();
+  // 戦闘ポップアップ(`BattlePopup`)の戦闘エリアに相手デッキのカードを表示するため、
+  // 章内で見えている戦闘ビートそれぞれの対戦相手デッキ(前衛/控え)をあらかじめ取得しておく。
+  const enemyDeckByBeatId = new Map<number, Deck>();
   if (user) {
     for (const beat of visibleBeats) {
       if (beat.beatType === "battle" && beat.deckId !== null) {
         battlesByBeatId.set(beat.id, await listStoryBattles(user.id, beat.id));
+        const enemyDeck = await getDeckById(beat.deckId);
+        if (enemyDeck) {
+          enemyDeckByBeatId.set(beat.id, enemyDeck);
+        }
       }
     }
   }
@@ -222,14 +229,25 @@ export default async function StoryDetailPage({ params }: PageProps) {
               <p style={{ color: "var(--muted)" }}>この戦闘イベントはまだ準備中です。</p>
             )}
 
-            {beat.beatType === "battle" && beat.deckId !== null && (
+            {beat.beatType === "battle" && beat.deckId !== null && !enemyDeckByBeatId.has(beat.id) && (
+              <p className="form-error" role="alert">
+                対戦相手のデッキが見つかりません。管理者に連絡してください。
+              </p>
+            )}
+
+            {beat.beatType === "battle" && beat.deckId !== null && enemyDeckByBeatId.has(beat.id) && (
               <div className="story-detail__battle">
                 <p style={{ marginBottom: "1rem", color: "var(--muted)" }}>
                   {beat.clearedAt
                     ? "既にクリア済みです。もう一度挑んで祝福を重ねることもできます。"
                     : "勝利すると次へ進めます。"}
                 </p>
-                <StoryBattleButton beatId={beat.id} label={beat.title} />
+                <StoryBattleButton
+                  beatId={beat.id}
+                  label={beat.title}
+                  playerDeck={deck}
+                  enemyDeck={enemyDeckByBeatId.get(beat.id)!}
+                />
                 {(battlesByBeatId.get(beat.id)?.length ?? 0) > 0 && (
                   <ul className="story-history-list" style={{ marginTop: "1rem" }}>
                     {battlesByBeatId.get(beat.id)!.map((battle) => (
