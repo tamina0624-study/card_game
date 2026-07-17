@@ -1,7 +1,7 @@
 /**
  * AI審判 接続基盤。
  *
- * - モジュール読み込み時に、プロジェクトルートの `システムプロンプト.md` を
+ * - モジュール読み込み時に、`docs/システムプロンプト.md` を
  *   `fs.readFileSync` でUTF-8として読み込み、`SYSTEM_PROMPT` 定数としてキャッシュする
  *   (内容は一切改変せずそのまま `system` パラメータへ渡す)。
  * - 既定は `@anthropic-ai/sdk` の `Anthropic` クライアント(APIキーは環境変数
@@ -25,11 +25,11 @@ import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 
 function resolveSystemPromptPath(): string {
-  return path.resolve(process.cwd(), "システムプロンプト.md");
+  return path.resolve(process.cwd(), "docs", "システムプロンプト.md");
 }
 
 /**
- * プロジェクトルートの `システムプロンプト.md` の内容(無改変)。
+ * `docs/システムプロンプト.md` の内容(無改変)。
  * モジュール読み込み時に一度だけ読み込み、以降はこの定数値をそのまま使い回す。
  */
 export const SYSTEM_PROMPT: string = fs.readFileSync(
