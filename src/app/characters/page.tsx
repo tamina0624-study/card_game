@@ -18,7 +18,7 @@ import { getCurrentUser } from "@/lib/auth/session";
  * キャラクターは全ユーザー共通の資産のため未ログインでも一覧を隠さない)。
  *
  * 背景は `.page-bg`(`src/app/page.tsx`・`src/app/decks/page.tsx` と共通、
- * `ゲーム画面イメージ/Top画面の背景イメージ.png`)。
+ * `docs/参考画像/ゲーム画面イメージ/Top画面の背景イメージ.png`)。
  */
 export const dynamic = "force-dynamic";
 

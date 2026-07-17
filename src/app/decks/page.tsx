@@ -16,7 +16,7 @@ import { getCurrentUser } from "@/lib/auth/session";
  * `src/app/stories/page.tsx` と同じ方針でログイン/新規登録への導線のみ表示する。
  *
  * 背景は `.page-bg`(`src/app/page.tsx`・`src/app/characters/page.tsx` と共通、
- * `ゲーム画面イメージ/Top画面の背景イメージ.png`)。
+ * `docs/参考画像/ゲーム画面イメージ/Top画面の背景イメージ.png`)。
  */
 export const dynamic = "force-dynamic";
 
