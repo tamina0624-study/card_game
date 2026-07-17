@@ -1,8 +1,35 @@
 # card_game — AIキャラクターカードバトルゲーム
 
+> ルフィと一護ってどっちが強いの？<br>
+> 手塚部長だったら戦えるんじゃないか？<br>
+> GTOなら裏技で勝てる？<br>
+> 進清十郎が最強！
+>
+> そんな夢のような遊びが再現できます。
+>
+> ルフィのゴムゴムのパンチを<br>
+> 手塚部長のゾーンで軌道をそらす！
+
+<p>
+<img src="public/characters/sample/aren.png" width="90" alt="紅蓮の剣士アレン">
+<img src="public/characters/sample/zephyr.png" width="90" alt="天空の剣聖ゼファー">
+<img src="public/characters/sample/luna.png" width="90" alt="月光の巫女ルナ">
+<img src="public/characters/sample/crow.png" width="90" alt="闇夜の暗殺者クロウ">
+</p>
+
+(↑ 実際にこのゲームで作れるオリジナルキャラクターカードの例)
+
 ユーザーが自由にキャラクターカードを作成し、AI(Claude)が公平な審判として戦闘ログを生成するオンラインカードゲームのMVP実装。
 
-仕様の詳細は以下を参照。
+## スクリーンショット
+
+| トップページ | 対戦(戦闘ポップアップ) | ストーリー章詳細 |
+|---|---|---|
+| ![トップページ](docs/画面キャプチャ/トップ.png) | ![対戦の戦闘ポップアップ](docs/画面キャプチャ/対戦_戦闘ポップアップ.png) | ![ストーリー章詳細](docs/画面キャプチャ/ストーリー章詳細.png) |
+
+その他の画面・各画面内の領域名は[docs/画面構成・UI部品名.md](./docs/画面構成・UI部品名.md)を参照。
+
+仕様の詳細は以下を参照(索引は[docs/README.md](./docs/README.md))。
 
 - [docs/開発指示書.md](./docs/開発指示書.md) — ゲーム仕様全体・確定事項
 - [docs/システムプロンプト.md](./docs/システムプロンプト.md) — AI審判用システムプロンプト
